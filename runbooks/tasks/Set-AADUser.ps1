@@ -33,4 +33,7 @@ if ($null -eq $targetUser)
 
 Write-Output $targetUser
 
+$allUsers = Get-AzADUser
+Write-Output $allUsers
+
 # Update-AzADUser -ObjectId $objectId -UsageLocation "fr"
