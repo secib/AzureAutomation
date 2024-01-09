@@ -31,4 +31,6 @@ if ($null -eq $targetUser)
     exit
 }
 
+Write-Output $targetUser
+
 # Update-AzADUser -ObjectId $objectId -UsageLocation "fr"
