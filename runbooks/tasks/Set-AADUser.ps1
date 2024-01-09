@@ -30,8 +30,11 @@ try
 catch
 {
     Write-Error "Unexpected request body."
-    Write-Output $WebhookData.RequestBody
     exit
+}
+finally
+{
+    Write-Output $WebhookData.RequestBody
 }
 
 $azProfile = Connect-AzAccount -Identity -ErrorAction Stop
