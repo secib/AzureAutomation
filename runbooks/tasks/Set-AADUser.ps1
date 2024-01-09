@@ -23,7 +23,16 @@ if (-Not $WebhookData.RequestBody)
     $WebhookData = $WebhookData | ConvertFrom-Json
 }
 
-[Body]$requestBody = $WebhookData.RequestBody | ConvertFrom-Json -ErrorAction Stop
+try
+{
+    [Body]$requestBody = $WebhookData.RequestBody | ConvertFrom-Json -ErrorAction Stop
+}
+catch
+{
+    Write-Error "Unexpected request body."
+    Write-Output $WebhookData.RequestBody
+    exit
+}
 
 $azProfile = Connect-AzAccount -Identity -ErrorAction Stop
 
