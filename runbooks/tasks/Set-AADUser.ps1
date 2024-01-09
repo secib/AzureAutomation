@@ -20,7 +20,7 @@ if ($null -eq $WebhookData)
 # Logic to allow for testing in Test pane
 if (-Not $WebhookData.RequestBody)
 { 
-    $WebhookData =  $WebhookData | ConvertFrom-Json
+    $WebhookData = $WebhookData | ConvertFrom-Json
 }
 
 [Body]$requestBody = $WebhookData.RequestBody | ConvertFrom-Json
@@ -39,5 +39,12 @@ if ($null -eq $targetUser)
     exit
 }
 
+$params = @{
+    ObjectId       = $requestBody.ObjectId
+    UsageLocation  = "fr"
+    PasswordPolicy = "DisablePasswordExpiration"
+}
+
+Update-AzADUser @params
+
 Write-Output $targetUser
-# Update-AzADUser -ObjectId $requestBody.ObjectId -UsageLocation "fr"
