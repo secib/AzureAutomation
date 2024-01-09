@@ -5,6 +5,11 @@ param (
     $WebhookData
 )
 
+class Body
+{
+    [string]$ObjectId
+}
+
 # exit if no provided webhookdata
 if ($null -eq $WebhookData)
 {
@@ -15,25 +20,24 @@ if ($null -eq $WebhookData)
 # Logic to allow for testing in Test pane
 if (-Not $WebhookData.RequestBody)
 { 
-    $WebhookData = (ConvertFrom-Json -InputObject $WebhookData)
+    $WebhookData =  $WebhookData | ConvertFrom-Json
+}
+
+[Body]$requestBody = $WebhookData.RequestBody | ConvertFrom-Json
+if ($null -eq $requestBody)
+{
+    Write-Error "Unexpected request body."
 }
 
 $azProfile = Connect-AzAccount -Identity -ErrorAction Stop
 
-Write-Output $WebhookData.RequestBody
-$requestBody = (ConvertFrom-Json -InputObject $WebhookData.RequestBody)
-$objectId = $requestBody.objectId
-$targetUser = Get-AzADUser -ObjectId $objectId
+$targetUser = Get-AzADUser -ObjectId $requestBody.ObjectId
 
 if ($null -eq $targetUser)
 {
-    Write-Error "User with objectId $objectId not found."
+    Write-Error "User with objectId $($requestBody.ObjectId) not found."
     exit
 }
 
 Write-Output $targetUser
-
-$allUsers = Get-AzADUser
-Write-Output $allUsers
-
-# Update-AzADUser -ObjectId $objectId -UsageLocation "fr"
+# Update-AzADUser -ObjectId $requestBody.ObjectId -UsageLocation "fr"
