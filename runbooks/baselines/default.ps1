@@ -1,26 +1,22 @@
-[CmdletBinding()]
-param (
-    [Parameter()]
-    [object]
-    $WebhookData
-)
+# Ensures you do not inherit an AzContext in your runbook
+Disable-AzContextAutosave -Scope Process
 
-# exit if no provided webhookdata
-if ($null -eq $WebhookData)
-{
-    Write-Error "No webhook data provided."
-    continue
-}
+# Connect to Azure with system-assigned managed identity
+$AzureContext = (Connect-AzAccount -Identity).context
 
-Write-Output $WebhookData
+# Set and store context
+$AzureContext = Set-AzContext -SubscriptionName $AzureContext.Subscription -DefaultProfile $AzureContext
 
-$Organization = (ConvertFrom-Json -InputObject $WebhookData.RequestBody).Organization
+# Get initial domain name or default domain name
+$Organization = (Get-AzDomain).Domains | Where-Object { $_ -like "*.onmicrosoft.com" }
 
 if ($null -eq $Organization)
 {
-    Write-Error "No provided value for Organization"
-    continue
+    $Organization = (Get-AzDomain).DefaultDomain
 }
+
+# Import the ExchangeOnlineManagement Module we imported into the Automation Account
+Import-Module ExchangeOnlineManagement
 
 Connect-ExchangeOnline -ManagedIdentity -Organization $Organization
 
