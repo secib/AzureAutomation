@@ -8,11 +8,11 @@ $AzureContext = (Connect-AzAccount -Identity).context
 $AzureContext = Set-AzContext -SubscriptionName $AzureContext.Subscription -DefaultProfile $AzureContext
 
 # Get initial domain name or default domain name
-$Organization = (Get-AzDomain).Domains | Where-Object { $_ -like "*.onmicrosoft.com" }
+$Organization = (Get-AzTenant).Domains | Where-Object { $_ -like "*.onmicrosoft.com" }
 
 if ($null -eq $Organization)
 {
-    $Organization = (Get-AzDomain).DefaultDomain
+    $Organization = (Get-AzTenant).DefaultDomain
 }
 
 # Import the ExchangeOnlineManagement Module we imported into the Automation Account
