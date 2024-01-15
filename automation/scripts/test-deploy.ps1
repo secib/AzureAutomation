@@ -9,6 +9,14 @@ param (
     $ResourceGroupName = "Automation"
 )
 
+$accessToken = Read-Host -AsSecureString
+
+if ($null -eq $accessToken)
+{
+    Write-Error "no access token provided"
+    exit
+}
+
 $azContext = Set-AzContext -Subscription $SubscriptionName -ErrorAction Stop
 $workingDir = "C:\Users\SCLAVON\repos\AzureAutomation\automation\accounts"
 
@@ -17,9 +25,9 @@ $params = @{
     SubscriptionName          = $SubscriptionName
     ResourceGroupName         = $ResourceGroupName
     DeploymentName            = "administrativeTaskDeployment_{0}" -f (get-date).ToFileTimeUtc()
-    TemplateFile              = Join-Path $workingDir "\AdministrativeTask\armTemplate_administrativeTask.json"
-    TemplateParameterFile     = Join-Path $workingDir "\AdministrativeTask\armTemplate_administrativeTask.parameters.json"
-    AccessToken               = ConvertTo-SecureString -AsPlainText "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" -Force
+    TemplateFile              = Join-Path $workingDir "\AdministrativeTask\templates\armTemplate_administrativeTask.json"
+    TemplateParameterFile     = Join-Path $workingDir "\AdministrativeTask\templates\armTemplate_administrativeTask.parameters.json"
+    AccessToken               = $accessToken
     ApplicationRoleAssignment = @{ ResourceAppId = "00000003-0000-0000-c000-000000000000"; ApplicationRole = 'User.ReadWrite.All' }
 }
 
@@ -33,9 +41,9 @@ $params = @{
     SubscriptionName          = $SubscriptionName
     ResourceGroupName         = $ResourceGroupName
     DeploymentName            = "baselineDeployment_{0}" -f (get-date).ToFileTimeUtc()
-    TemplateFile              = Join-Path $workingDir "\Baseline\baseline.json"
-    TemplateParameterFile     = Join-Path $workingDir "\Baseline\baseline.parameters.json"
-    AccessToken               = ConvertTo-SecureString -AsPlainText "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" -Force
+    TemplateFile              = Join-Path $workingDir "\Baseline\templates\baseline.json"
+    TemplateParameterFile     = Join-Path $workingDir "\Baseline\templates\baseline.parameters.json"
+    AccessToken               = $accessToken
     ApplicationRoleAssignment = @(
         @{ ResourceAppId = "00000002-0000-0ff1-ce00-000000000000"; ApplicationRole = 'Exchange.ManageAsApp' },
         @{ ResourceAppId = "00000003-0000-0000-c000-000000000000"; ApplicationRole = 'Directory.Read.All' }
