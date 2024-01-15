@@ -1,0 +1,185 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "automationAccountName": {
+            "type": "String",
+            "metadata": {
+                "description": "Automation account name"
+            }
+        },
+        "runbookName": {
+            "type": "String",
+            "metadata": {
+                "description": "Runbook name for which webhook will be created"
+            }
+        },
+        "runbookScript": {
+            "type": "String",
+            "defaultValue": "[concat(parameters('runbookName'), '.ps1')]",
+            "metadata": {
+                "description": "PowerShell script name"
+            }
+        },
+        "webhookName": {
+            "type": "String",
+            "defaultValue": "[concat(parameters('runbookName'), 'Webhook')]",
+            "metadata": {
+                "description": "Webhook name"
+            }
+        },
+        "WebhookExpiryTime": {
+            "type": "String",
+            "defaultValue": "[dateTimeAdd(parameters('baseTime'), 'P1Y')]",
+            "metadata": {
+                "description": "Webhook Expiry time"
+            }
+        },
+        "sourceControl": {
+            "type": "object",
+            "defaultValue": {
+                "name": "SCGitHub",
+                "repositoryAccountName": "secib",
+                "repositoryName": "AzureAutomation",
+                "branch": "main",
+                "folderPath": "automation/accounts/Baseline/runbooks"
+            }
+        },
+        "baseUri": {
+            "defaultValue": "[concat('https://raw.githubusercontent.com/', parameters('sourceControl').repositoryAccountName, '/', parameters('sourceControl').repositoryName, '/', parameters('sourceControl').branch, '/', parameters('sourceControl').folderPath, '/')]",
+            "type": "String",
+            "metadata": {
+                "description": "Repository base Uri"
+            }
+        },
+        "baseTime": {
+            "type": "string",
+            "defaultValue": "[utcNow('u')]"
+        },
+        "automationLocation": {
+            "type": "string",
+            "defaultValue": "francecentral"
+        }
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Automation/automationAccounts",
+            "apiVersion": "2022-08-08",
+            "name": "[parameters('automationAccountName')]",
+            "location": "[parameters('automationLocation')]",
+            "identity": {
+                "type": "SystemAssigned"
+            },
+            "properties": {
+                "publicNetworkAccess": true,
+                "disableLocalAuth": false,
+                "sku": {
+                    "name": "Basic"
+                },
+                "encryption": {
+                    "keySource": "Microsoft.Automation",
+                    "identity": {}
+                }
+            },
+            "resources": [
+                {
+                    "type": "runbooks",
+                    "apiVersion": "2018-06-30",
+                    "name": "[parameters('runbookName')]",
+                    "location": "[resourceGroup().location]",
+                    "dependsOn": [
+                        "[parameters('automationAccountName')]"
+                    ],
+                    "properties": {
+                        "runbookType": "PowerShell",
+                        "logProgress": false,
+                        "logVerbose": false,
+                        "description": "Apply user default settings",
+                        "publishContentLink": {
+                            "uri": "[uri(parameters('baseUri'), parameters('runbookScript'))]",
+                            "version": "1.0.0.0"
+                        }
+                    }
+                },
+                {
+                    "type": "webhooks",
+                    "apiVersion": "2018-06-30",
+                    "name": "[parameters('webhookName')]",
+                    "dependsOn": [
+                        "[parameters('automationAccountName')]",
+                        "[parameters('runbookName')]"
+                    ],
+                    "properties": {
+                        "isEnabled": true,
+                        "expiryTime": "[parameters('WebhookExpiryTime')]",
+                        "runbook": {
+                            "name": "[parameters('runbookName')]"
+                        }
+                    }
+                },
+                {
+                    "type": "Microsoft.Automation/automationAccounts/schedules",
+                    "apiVersion": "2023-11-01",
+                    "name": "[concat(parameters('automationAccountName'), '/Daily')]",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName'))]"
+                    ],
+                    "properties": {
+                        "startTime": "[dateTimeAdd(parameters('baseTime'), 'PT1H')]",
+                        "expiryTime": "9999-12-31T18:59:00-05:00",
+                        "interval": 1,
+                        "frequency": "Day",
+                        "timeZone": "America/Toronto"
+                    }
+                },
+                {
+                    "type": "Microsoft.Automation/automationAccounts/jobSchedules",
+                    "apiVersion": "2023-11-01",
+                    "name": "[concat(parameters('automationAccountName'), '/', guid(resourceGroup().id, deployment().name))]",
+                    "dependsOn": [
+                        "[parameters('automationAccountName')]",
+                        "[parameters('runbookName')]"
+                    ],
+                    "properties": {
+                        "runbook": {
+                            "name": "[parameters('runbookName')]"
+                        },
+                        "schedule": {
+                            "name": "Daily"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "[concat(parameters('automationAccountName'), '/ExchangeOnlineManagement')]",
+            "type": "Microsoft.Automation/automationAccounts/modules",
+            "apiVersion": "2022-08-08",
+            "location": "[parameters('automationLocation')]",
+            "properties": {
+                "isGlobal": false,
+                "sizeInBytes": 0,
+                "contentLink": {
+                    "uri": "[concat('https://www.powershellgallery.com/api/v2/package/', 'ExchangeOnlineManagement')]"
+                }
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName'))]"
+            ]
+        }
+    ],
+    "outputs": {
+        "webhookUri": {
+            "type": "String",
+            "value": "[reference(parameters('webhookName')).uri]"
+        },
+        "automationAccountName": {
+            "type": "String",
+            "value": "[parameters('automationAccountName')]"
+        },
+        "sourceControl": {
+            "type": "object",
+            "value": "[parameters('sourceControl')]"
+        }
+    }
+}
