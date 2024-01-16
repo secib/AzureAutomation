@@ -1,0 +1,41 @@
+{
+    "ApplicationId": "1ec3522a-6bec-4ea9-861d-1c01f2ae953f",
+    "AutomationAccountDeploymentBuilders": [
+        {
+            "SubscriptionName": "Crayon",
+            "ResourceGroupDeployment": {
+                "ResourceGroupName": "Automation",
+                "TemplateFile": "C:\\Users\\SCLAVON\\repos\\AzureAutomation\\automation\\accounts\\AdministrativeTask\\templates\\armTemplate_administrativeTask.json",
+                "TemplateParameterFile": "C:\\Users\\SCLAVON\\repos\\AzureAutomation\\automation\\accounts\\AdministrativeTask\\templates\\armTemplate_administrativeTask.parameters.json"
+            },
+            "ApplicationRoleAssignments": [
+                {
+                    "ResourceAppId": "00000003-0000-0000-c000-000000000000",
+                    "ApplicationRoles": [
+                        "User.ReadWrite.All"
+                    ]
+                }
+            ],
+            "DirectoryRoles": []
+        },
+        {
+            "SubscriptionName": "Crayon",
+            "ResourceGroupDeployment": {
+                "ResourceGroupName": "Automation",
+                "TemplateFile": "C:\\Users\\SCLAVON\\repos\\AzureAutomation\\automation\\accounts\\Baseline\\templates\\baseline.json",
+                "TemplateParameterFile": "C:\\Users\\SCLAVON\\repos\\AzureAutomation\\automation\\accounts\\Baseline\\templates\\baseline.parameters.json"
+            },
+            "ApplicationRoleAssignments": [
+                {
+                    "ResourceAppId": "00000002-0000-0ff1-ce00-000000000000",
+                    "ApplicationRoles": [
+                        "Exchange.ManageAsApp"
+                    ]
+                }
+            ],
+            "DirectoryRoles": [
+                "Exchange Administrator"
+            ]
+        }
+    ]
+}

@@ -28,6 +28,12 @@
                 "description": "Webhook name"
             }
         },
+        "webhookData": {
+            "type": "String",
+            "metadata": {
+                "description": "Webhook data"
+            }
+        },
         "WebhookExpiryTime": {
             "type": "String",
             "defaultValue": "[dateTimeAdd(parameters('baseTime'), 'P1Y')]",
@@ -141,6 +147,9 @@
                         "[parameters('runbookName')]"
                     ],
                     "properties": {
+                        "parameters": {
+                            "WebhookData": "[parameters('webhookData')]"
+                        },
                         "runbook": {
                             "name": "[parameters('runbookName')]"
                         },

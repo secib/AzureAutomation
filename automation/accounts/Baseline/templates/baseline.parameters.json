@@ -7,6 +7,9 @@
         },
         "runbookName": {
             "value": "default"
+        },
+        "webhookData": {
+            "value": "{\"WebhookName\":\"defaultWebhook\",\"RequestBody\":\"{\\\"organization\\\":\\\"secib143.onmicrosoft.com\\\"}\"}"
         }
     }
 }

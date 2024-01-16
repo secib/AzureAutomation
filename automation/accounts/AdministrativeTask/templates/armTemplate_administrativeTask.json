@@ -8,6 +8,12 @@
                 "description": "Automation account name"
             }
         },
+        "automationLocation": {
+            "type": "string",
+            "metadata": {
+                "description": "Azure resources location"
+            }
+        },
         "runbookName": {
             "type": "String",
             "metadata": {
@@ -19,6 +25,12 @@
             "defaultValue": "[concat(parameters('runbookName'), '.ps1')]",
             "metadata": {
                 "description": "PowerShell script name"
+            }
+        },
+        "sourceControl": {
+            "type": "object",
+            "metadata": {
+                "description": "Repository settings"
             }
         },
         "webhookName": {
@@ -35,18 +47,8 @@
                 "description": "Webhook Expiry time"
             }
         },
-        "sourceControl": {
-            "type": "object",
-            "defaultValue": {
-                "name": "SCGitHub",
-                "repositoryAccountName": "secib",
-                "repositoryName": "AzureAutomation",
-                "branch": "main",
-                "folderPath": "automation/accounts/AdministrativeTask/runbooks"
-            }
-        },
         "baseUri": {
-            "defaultValue": "[concat('https://raw.githubusercontent.com/', parameters('sourceControl').repositoryAccountName, '/', parameters('sourceControl').repositoryName, '/', parameters('sourceControl').branch, '/', parameters('sourceControl').folderPath, '/')]",
+            "defaultValue": "[concat(parameters('sourceControl').rawBaseUri, parameters('sourceControl').repositoryAccountName, '/', parameters('sourceControl').repositoryName, '/', parameters('sourceControl').branch, '/', parameters('sourceControl').folderPath, '/')]",
             "type": "String",
             "metadata": {
                 "description": "Repository base Uri"
@@ -64,7 +66,7 @@
             "type": "Microsoft.Automation/automationAccounts",
             "apiVersion": "2022-08-08",
             "name": "[parameters('automationAccountName')]",
-            "location": "francecentral",
+            "location": "[parameters('automationLocation')]",
             "identity": {
                 "type": "SystemAssigned"
             },
