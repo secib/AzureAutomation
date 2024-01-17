@@ -155,9 +155,17 @@
         }
     ],
     "outputs": {
-        "webhookUri": {
-            "type": "String",
-            "value": "[reference(variables('webhookName')).uri]"
+        "webhook": {
+            "type": "object",
+            "value": {
+                "resourceGroupName": "[resourceGroup().name]",
+                "AutomationAccountName": "[parameters('automationAccountName')]",
+                "name": "[variables('webhookName')]",
+                "uri": "[reference(variables('webhookName')).Uri]",
+                "creationTime": "[reference(variables('webhookName')).CreationTime]",
+                "expiryTime": "[reference(variables('webhookName')).ExpiryTime]",
+                "lastModifiedTime": "[reference(variables('webhookName')).LastModifiedTime]"
+            }
         },
         "automationAccountName": {
             "type": "String",
