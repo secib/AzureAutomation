@@ -129,9 +129,9 @@
         }
     ],
     "outputs": {
-        "webhookUri": {
-            "type": "String",
-            "value": "[reference(variables('webhookName')).uri]"
+        "webhook": {
+            "type": "object",
+            "value": "[reference(variables('webhookName'))]"
         },
         "automationAccountName": {
             "type": "String",

@@ -15,8 +15,8 @@ class AutomationAccountDeploymentBuilder
 class ResourceGroupDeployment
 {
     [string]$ResourceGroupName
-    [string]$TemplateFile
-    [string]$TemplateParameterFile
+    [string]$TemplateUri
+    [string]$TemplateParameterUri
 }
 
 class ApplicationRoleAssignment

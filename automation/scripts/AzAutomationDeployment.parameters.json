@@ -5,8 +5,8 @@
             "SubscriptionName": "Crayon",
             "ResourceGroupDeployment": {
                 "ResourceGroupName": "Automation",
-                "TemplateFile": "C:\\Users\\SCLAVON\\repos\\AzureAutomation\\automation\\accounts\\AdministrativeTask\\templates\\armTemplate_administrativeTask.json",
-                "TemplateParameterFile": "C:\\Users\\SCLAVON\\repos\\AzureAutomation\\automation\\accounts\\AdministrativeTask\\templates\\armTemplate_administrativeTask.parameters.json"
+                "TemplateUri": "https://raw.githubusercontent.com/secib/AzureAutomation/main/automation/accounts/AdministrativeTask/templates/armTemplate_administrativeTask.json",
+                "TemplateParameterUri": "https://raw.githubusercontent.com/secib/AzureAutomation/main/automation/accounts/AdministrativeTask/templates/armTemplate_administrativeTask.parameters.json"
             },
             "ApplicationRoleAssignments": [
                 {
@@ -22,8 +22,8 @@
             "SubscriptionName": "Crayon",
             "ResourceGroupDeployment": {
                 "ResourceGroupName": "Automation",
-                "TemplateFile": "C:\\Users\\SCLAVON\\repos\\AzureAutomation\\automation\\accounts\\Baseline\\templates\\baseline.json",
-                "TemplateParameterFile": "C:\\Users\\SCLAVON\\repos\\AzureAutomation\\automation\\accounts\\Baseline\\templates\\baseline.parameters.json"
+                "TemplateUri": "https://raw.githubusercontent.com/secib/AzureAutomation/main/automation/accounts/Baseline/templates/baseline.json",
+                "TemplateParameterUri": "https://raw.githubusercontent.com/secib/AzureAutomation/main/automation/accounts/Baseline/templates/baseline.parameters.json"
             },
             "ApplicationRoleAssignments": [
                 {
