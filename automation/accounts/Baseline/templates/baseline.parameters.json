@@ -8,8 +8,20 @@
         "runbookName": {
             "value": "default"
         },
-        "webhookData": {
-            "value": "{\"WebhookName\":\"defaultWebhook\",\"RequestBody\":\"{\\\"organization\\\":\\\"secib143.onmicrosoft.com\\\"}\"}"
+        "automationLocation": {
+            "value": "francecentral"
+        },
+        "initialDomain": {
+            "value": "test.onmicrosoft.com"
+        },
+        "sourceControl": {
+            "value": {
+                "name": "SCGitHub",
+                "repositoryAccountName": "secib",
+                "repositoryName": "AzureAutomation",
+                "branch": "main",
+                "folderPath": "automation/accounts/Baseline/runbooks"
+            }
         }
     }
 }

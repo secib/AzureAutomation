@@ -11,61 +11,38 @@
         "runbookName": {
             "type": "String",
             "metadata": {
-                "description": "Runbook name for which webhook will be created"
+                "description": "Runbook name"
             }
         },
-        "runbookScript": {
-            "type": "String",
-            "defaultValue": "[concat(parameters('runbookName'), '.ps1')]",
+        "automationLocation": {
+            "type": "string",
             "metadata": {
-                "description": "PowerShell script name"
-            }
-        },
-        "webhookName": {
-            "type": "String",
-            "defaultValue": "[concat(parameters('runbookName'), 'Webhook')]",
-            "metadata": {
-                "description": "Webhook name"
-            }
-        },
-        "webhookData": {
-            "type": "String",
-            "metadata": {
-                "description": "Webhook data"
-            }
-        },
-        "WebhookExpiryTime": {
-            "type": "String",
-            "defaultValue": "[dateTimeAdd(parameters('baseTime'), 'P1Y')]",
-            "metadata": {
-                "description": "Webhook Expiry time"
+                "description": "Azure resources location"
             }
         },
         "sourceControl": {
             "type": "object",
-            "defaultValue": {
-                "name": "SCGitHub",
-                "repositoryAccountName": "secib",
-                "repositoryName": "AzureAutomation",
-                "branch": "main",
-                "folderPath": "automation/accounts/Baseline/runbooks"
-            }
-        },
-        "baseUri": {
-            "defaultValue": "[concat('https://raw.githubusercontent.com/', parameters('sourceControl').repositoryAccountName, '/', parameters('sourceControl').repositoryName, '/', parameters('sourceControl').branch, '/', parameters('sourceControl').folderPath, '/')]",
-            "type": "String",
             "metadata": {
-                "description": "Repository base Uri"
+                "description": "Source control settings"
             }
         },
         "baseTime": {
             "type": "string",
             "defaultValue": "[utcNow('u')]"
         },
-        "automationLocation": {
-            "type": "string",
-            "defaultValue": "francecentral"
+        "initialDomain": {
+            "type": "String",
+            "metadata": {
+                "description": "Initial domain name"
+            }
         }
+    },
+    "variables": {
+        "baseUri": "[concat('https://raw.githubusercontent.com/', parameters('sourceControl').repositoryAccountName, '/', parameters('sourceControl').repositoryName, '/', parameters('sourceControl').branch, '/', parameters('sourceControl').folderPath, '/')]",
+        "runbookScript": "[concat(parameters('runbookName'), '.ps1')]",
+        "webhookName": "[concat(parameters('runbookName'), 'Webhook')]",
+        "WebhookExpiryTime": "[dateTimeAdd(parameters('baseTime'), 'P1Y')]",
+        "webhookData": "[concat('{\"WebhookName\":\"defaultWebhook\",\"RequestBody\":\"{\\\"organization\\\":\\\"', parameters('initialDomain'), '\\\"}\"}')]"
     },
     "resources": [
         {
@@ -102,7 +79,7 @@
                         "logVerbose": false,
                         "description": "Apply user default settings",
                         "publishContentLink": {
-                            "uri": "[uri(parameters('baseUri'), parameters('runbookScript'))]",
+                            "uri": "[uri(variables('baseUri'), variables('runbookScript'))]",
                             "version": "1.0.0.0"
                         }
                     }
@@ -110,14 +87,14 @@
                 {
                     "type": "webhooks",
                     "apiVersion": "2018-06-30",
-                    "name": "[parameters('webhookName')]",
+                    "name": "[variables('webhookName')]",
                     "dependsOn": [
                         "[parameters('automationAccountName')]",
                         "[parameters('runbookName')]"
                     ],
                     "properties": {
                         "isEnabled": true,
-                        "expiryTime": "[parameters('WebhookExpiryTime')]",
+                        "expiryTime": "[variables('WebhookExpiryTime')]",
                         "runbook": {
                             "name": "[parameters('runbookName')]"
                         }
@@ -148,7 +125,7 @@
                     ],
                     "properties": {
                         "parameters": {
-                            "WebhookData": "[parameters('webhookData')]"
+                            "WebhookData": "[variables('webhookData')]"
                         },
                         "runbook": {
                             "name": "[parameters('runbookName')]"
@@ -180,7 +157,7 @@
     "outputs": {
         "webhookUri": {
             "type": "String",
-            "value": "[reference(parameters('webhookName')).uri]"
+            "value": "[reference(variables('webhookName')).uri]"
         },
         "automationAccountName": {
             "type": "String",

@@ -99,6 +99,8 @@ function New-AutomationSourceControlDeployment
         $AutomationAccountName
     )
 
+    Write-Verbose "$((Get-Date).ToString("hh:mm:ss")) - Assignation du rôle 'Contributor' au compte d'automatisation $AutomationAccountName"
+
     $params = @{
         ObjectId           = Get-azAutomationAccount -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName | Select-Object -ExpandProperty Identity | Select-Object -ExpandProperty PrincipalId
         Scope              = "/subscriptions/{0}/resourceGroups/{1}/providers/Microsoft.Automation/automationAccounts/{2}" -f $SubscriptionId, $ResourceGroupName, $AutomationAccountName
@@ -115,13 +117,13 @@ function New-AutomationSourceControlDeployment
 
     $roleAssignment | Out-Host
 
+    Write-Verbose "$((Get-Date).ToString("hh:mm:ss")) - Configuration du contrôle de source $($SourceControl.Name) pour le compte d'automatisation $AutomationAccountName"
+
     $params = @{
         Name                  = $SourceControl.Name
         ResourceGroupName     = $ResourceGroupName
         AutomationAccountName = $AutomationAccountName
     }
-
-    Write-Verbose "Configuration du contrôle de source $($SourceControl.Name) pour le compte d'automatisation..."
 
     $automationSourceControl = Get-AzAutomationSourceControl @params -ErrorAction SilentlyContinue
 
@@ -173,11 +175,11 @@ function New-ServicePrincipalAppRoleAssignment
             $appRole = $resourceServicePrincipal.appRoles | Where-Object { $_.Value -eq $role -and $_.allowedMemberTypes -contains "Application" }
             if (!$appRole)
             {
-                Write-Warning "Application permission '$role' not found in '$($roleAssignment.ResourceAppId)' application."
+                Write-Warning "Application permission '$role' not found in '$($roleAssignment.ResourceAppId)' application"
                 continue
             }
     
-            Write-Verbose "Assignation du rôle $role au principal de service $ServicePrincipalId..."
+            Write-Verbose "$((Get-Date).ToString("hh:mm:ss")) - Assignation du rôle '$role' au principal de service $ServicePrincipalId"
             $appRoleAssignment = Get-GraphServicePrincipalAppRoleAssignment -ObjectId $ServicePrincipalId | Where-Object { $_.appRoleId -eq $appRole.id }
             if (!$appRoleAssignment)
             {
@@ -204,7 +206,7 @@ function New-DirectoryRoleMember
     $directoryRole = Get-GraphDirectoryRole | Where-Object { $_.displayName -eq $DirectoryRoleName } | Select-Object -First 1
     $roleAssignment = Get-GraphDirectoryRoleMember -id $directoryRole.Id | Where-Object { $_.id -eq $ServicePrincipalId } | Select-Object -First 1
     
-    Write-Verbose "Assignation du rôle d'annuaire $DirectoryRoleName au principal de service $ServicePrincipalId..."
+    Write-Verbose "$((Get-Date).ToString("hh:mm:ss")) - Assignation du rôle d'annuaire '$DirectoryRoleName' au principal de service $ServicePrincipalId"
 
     if ($null -eq $roleAssignment)
     {
@@ -229,10 +231,10 @@ function Start-AzAutomationDeployment
     {
         $azContext = Set-AzContext -Subscription $builder.SubscriptionName -ErrorAction Stop
 
-        $deploymentOutput = New-ResourceGroupDeployment -Builder $builder.ResourceGroupDeployment
+        $deploymentOutput = New-ResourceGroupDeployment -Builder $builder.ResourceGroupDeployment -Verbose
 
         # save webhookUri
-        Write-Verbose "Ajoute de l'uri webhook dans le coffre-fort..."
+        Write-Verbose "$((Get-Date).ToString("hh:mm:ss")) - Ajout de l'uri webhook dans le coffre-fort"
         $deploymentOutput.WebhookUri
 
         # Set automation account source control
@@ -245,7 +247,7 @@ function Start-AzAutomationDeployment
                 AutomationAccountName = $deploymentOutput.AutomationAccountName
             }
     
-            $automationSourceControl = New-AutomationSourceControlDeployment @params
+            $automationSourceControl = New-AutomationSourceControlDeployment @params -Verbose
             $automationSourceControl | Out-Host
         }
 
@@ -261,7 +263,7 @@ function Start-AzAutomationDeployment
                     ApplicationRoleAssignment = $assignment
                 }
         
-                New-ServicePrincipalAppRoleAssignment @params    
+                New-ServicePrincipalAppRoleAssignment @params -Verbose
             }
         }
     
@@ -273,7 +275,7 @@ function Start-AzAutomationDeployment
     
             foreach ($directoryRoleName in $Builder.DirectoryRoles)
             {
-                New-DirectoryRoleMember -ServicePrincipalId $managedIdentityId -DirectoryRoleName $directoryRoleName
+                New-DirectoryRoleMember -ServicePrincipalId $managedIdentityId -DirectoryRoleName $directoryRoleName -Verbose
             }
         }    
     }
@@ -281,4 +283,4 @@ function Start-AzAutomationDeployment
 
 $null = Connect-AzAccount -ErrorAction Stop -WarningAction SilentlyContinue
 
-Start-AzAutomationDeployment -Path (Join-Path $PSScriptRoot "AzAutomationDeployment.parameters.json") -Verbose
+Start-AzAutomationDeployment -Path (Join-Path $PSScriptRoot "AzAutomationDeployment.parameters.json")
