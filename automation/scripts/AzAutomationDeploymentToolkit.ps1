@@ -41,7 +41,7 @@ class AutomationSourceControlDeploymentBuilder
 class AutomationAccountDeploymentOutput
 {
     [SourceControlOuput]$SourceControl
-    [string]$WebhookUri
+    [WebhookOutput]$Webhook
     [string]$AutomationAccountName
 }
 
@@ -53,6 +53,17 @@ class SourceControlOuput
     [string]$Branch
     [string]$FolderPath
     [string]$RawBaseUri
+}
+
+class WebhookOutput
+{
+    [string]$ResourceGroupName
+    [string]$AutomationAccountName
+    [string]$Name
+    [string]$Uri
+    [string]$CreationTime
+    [string]$ExpiryTime
+    [string]$LastModifiedTime
 }
 
 function New-ResourceGroupDeployment
@@ -74,7 +85,7 @@ function New-ResourceGroupDeployment
     return [AutomationAccountDeploymentOutput]@{
         AutomationAccountName = $azResourceGroupDeployment.Outputs["automationAccountName"].Value
         SourceControl         = $azResourceGroupDeployment.Outputs["sourceControl"].Value.ToObject("SourceControlOuput")
-        WebhookUri            = $azResourceGroupDeployment.Outputs["webhookUri"].Value
+        Webhook               = $azResourceGroupDeployment.Outputs["webhook"].Value.ToObject("WebhookOutput")
     }
 }
 
@@ -230,12 +241,15 @@ function Start-AzAutomationDeployment
     foreach ($builder in $configurationFile.AutomationAccountDeploymentBuilders)
     {
         $azContext = Set-AzContext -Subscription $builder.SubscriptionName -ErrorAction Stop
-
         $deploymentOutput = New-ResourceGroupDeployment -Builder $builder.ResourceGroupDeployment -Verbose
+        $deploymentOutput.Webhook | Out-Host
 
         # save webhookUri
-        Write-Verbose "$((Get-Date).ToString("hh:mm:ss")) - Ajout de l'uri webhook dans le coffre-fort"
-        $deploymentOutput.WebhookUri
+        if (!([string]::IsNullOrEmpty($deploymentOutput.Webhook.Uri)))
+        {
+            Write-Verbose "$((Get-Date).ToString("hh:mm:ss")) - Sauvegarde de l'uri webhook dans le coffre-fort" -Verbose
+            # $deploymentOutput.Webhook.Uri
+        }
 
         # Set automation account source control
         if ($null -ne $deploymentOutput.SourceControl)
