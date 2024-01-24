@@ -228,42 +228,31 @@ function Publish-AzAutomationAccount
     }
 }
 
+Import-Module Graph
+
 # Logic to allow for testing in Test pane
-# if (-Not $WebhookData.RequestBody)
-# { 
-#     $WebhookData = $WebhookData | ConvertFrom-Json
-# }
+if (-Not $WebhookData.RequestBody)
+{ 
+    $WebhookData = $WebhookData | ConvertFrom-Json
+}
 
-# try
-# {
-#     [WebhookRequestBody]$requestBody = $WebhookData.RequestBody | ConvertFrom-Json -ErrorAction Stop
-# }
-# catch
-# {
-#     Write-Error "Unexpected request body."
-#     exit
-# }
-# finally
-# {
-#     Write-Output $WebhookData.RequestBody
-# }
+try
+{
+    [WebhookRequestBody]$requestBody = $WebhookData.RequestBody | ConvertFrom-Json -ErrorAction Stop
+}
+catch
+{
+    Write-Error "Unexpected request body."
+    exit
+}
+finally
+{
+    Write-Output $WebhookData.RequestBody
+}
 
-# $azProfile = Connect-AzAccount -Identity -ErrorAction Stop
-$azProfile = Connect-AzAccount -ErrorAction Stop
+$null = Connect-AzAccount -Identity -ErrorAction Stop
 $subscription = Get-AzSubscription -SubscriptionId $requestBody.SubscriptionId
 $azContext = Set-AzContext -Subscription $subscription.Id -ErrorAction Stop
-
-Import-Module Graph -Force
 $null = Connect-Graph -AccessToken ((Get-AzAccessToken -ResourceTypeName MSGraph -TenantId $subscription.HomeTenantId ).token)
-
-$webhookData = @"
-{
-    "WebhookName": "defaultWebhook",
-    "RequestBody": "{\n    \"subscriptionId\": \"ffb58682-139a-41b1-b4b3-20fa17ed741c\",\n    \"TemplateObject\": {\n        \"SubscriptionName\": \"Crayon\",\n        \"ResourceGroupDeployment\": {\n            \"ResourceGroupName\": \"Automation\",\n            \"TemplateUri\": \"https://raw.githubusercontent.com/secib/AzureAutomation/main/automation/accounts/AdministrativeTask/templates/armTemplate_administrativeTask.json\",\n            \"TemplateParameterUri\": \"https://raw.githubusercontent.com/secib/AzureAutomation/main/automation/accounts/AdministrativeTask/templates/armTemplate_administrativeTask.parameters.json\"\n        },\n        \"ApplicationRoleAssignments\": [\n            {\n                \"ResourceAppId\": \"00000003-0000-0000-c000-000000000000\",\n            
-    \"ApplicationRoles\": [\n                    \"User.ReadWrite.All\"\n                ]\n            }\n        ],\n        \"DirectoryRoles\": []\n    }\n}"
-}
-"@ | ConvertFrom-Json
-
-$requestBody = $webhookData.RequestBody | ConvertFrom-Json
 
 Publish-AzAutomationAccount -SubscriptionId $requestBody.subscriptionId -TemplateObject $requestBody.TemplateObject

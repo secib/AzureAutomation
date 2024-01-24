@@ -25,19 +25,6 @@ class ApplicationRoleAssignment
     [string[]]$ApplicationRoles
 }
 
-class AutomationSourceControlDeploymentBuilder
-{
-    [string]$Name
-    [string]$RepoUrl
-    [string]$SourceType
-    [string]$Branch
-    [string]$FolderPath
-    [securestring]$AccessToken
-    [string]$ResourceGroupName
-    [string]$AutomationAccountName
-    [bool]$EnableAutoSync
-}
-
 class AutomationAccountDeploymentOutput
 {
     [SourceControlOuput]$SourceControl
@@ -139,18 +126,6 @@ function New-AutomationSourceControlDeployment
 
     if ($null -eq $automationSourceControl)
     {
-        # $params = @{
-        #     Name                  = $SourceControl.Name
-        #     ResourceGroupName     = $ResourceGroupName
-        #     AutomationAccountName = $AutomationAccountName
-        #     SourceType            = "GitHub"
-        #     RepoUrl               = "https://github.com/{0}/{1}.git" -f $SourceControl.RepositoryAccountName, $SourceControl.RepositoryName
-        #     Branch                = $SourceControl.Branch
-        #     FolderPath            = $SourceControl.FolderPath
-        #     AccessToken           = Read-Host -AsSecureString -Prompt "PAT"
-        #     EnableAutoSync        = $true
-        # }
-
         $params = @{
             Name                  = $SourceControl.Name
             ResourceGroupName     = $ResourceGroupName
