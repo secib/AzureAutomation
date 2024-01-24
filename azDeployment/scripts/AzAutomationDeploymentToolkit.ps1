@@ -51,6 +51,7 @@ class SourceControlOuput
     [string]$RepositoryUrl
     [string]$Branch
     [string]$FolderPath
+    [string]$SourceType
 }
 
 class WebhookOutput
@@ -154,7 +155,7 @@ function New-AutomationSourceControlDeployment
             Name                  = $SourceControl.Name
             ResourceGroupName     = $ResourceGroupName
             AutomationAccountName = $AutomationAccountName
-            SourceType            = "VsoGit"
+            SourceType            = $SourceControl.SourceType
             RepoUrl               = $SourceControl.RepositoryUrl
             Branch                = $SourceControl.Branch
             FolderPath            = $SourceControl.FolderPath

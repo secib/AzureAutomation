@@ -23,7 +23,8 @@
         "sourceControl": {
             "value": {
                 "name": "SCReposGit",
-                "RepositoryUrl": "https://AzDeploymentToolkitTestProject@dev.azure.com/AzDeploymentToolkitTestProject/AzDeploymentToolKitTest/_git/AzDeploymentToolKitTest",
+                "sourceType": "VsoGit",
+                "repositoryUrl": "https://AzDeploymentToolkitTestProject@dev.azure.com/AzDeploymentToolkitTestProject/AzDeploymentToolKitTest/_git/AzDeploymentToolKitTest",
                 "branch": "main",
                 "folderPath": "azDeployment/accounts/DeploymentToolKit/runbooks"
             }
