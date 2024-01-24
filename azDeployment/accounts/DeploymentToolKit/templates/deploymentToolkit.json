@@ -8,13 +8,25 @@
                 "description": "Automation account name"
             }
         },
-        "runbookName": {
+        "runbookName1": {
             "type": "String",
             "metadata": {
                 "description": "Runbook name"
             }
         },
-        "runbookPublishContentLink": {
+        "runbookPublishContentLink1": {
+            "type": "String",
+            "metadata": {
+                "description": "Runbook content link"
+            }
+        },
+        "runbookName2": {
+            "type": "String",
+            "metadata": {
+                "description": "Runbook name"
+            }
+        },
+        "runbookPublishContentLink2": {
             "type": "String",
             "metadata": {
                 "description": "Runbook content link"
@@ -38,7 +50,8 @@
         }
     },
     "variables": {
-        "webhookName": "[concat(parameters('runbookName'), 'Webhook')]",
+        "webhookName1": "[concat(parameters('runbookName1'), 'Webhook')]",
+        "webhookName2": "[concat(parameters('runbookName2'), 'Webhook')]",
         "WebhookExpiryTime": "[dateTimeAdd(parameters('baseTime'), 'P1Y')]"
     },
     "resources": [
@@ -65,7 +78,7 @@
                 {
                     "type": "runbooks",
                     "apiVersion": "2018-06-30",
-                    "name": "[parameters('runbookName')]",
+                    "name": "[parameters('runbookName1')]",
                     "location": "[resourceGroup().location]",
                     "dependsOn": [
                         "[parameters('automationAccountName')]"
@@ -76,7 +89,7 @@
                         "logVerbose": false,
                         "description": "Apply user default settings",
                         "publishContentLink": {
-                            "uri": "[parameters('runbookPublishContentLink')]",
+                            "uri": "[parameters('runbookPublishContentLink1')]",
                             "version": "1.0.0.0"
                         }
                     }
@@ -84,48 +97,51 @@
                 {
                     "type": "webhooks",
                     "apiVersion": "2018-06-30",
-                    "name": "[variables('webhookName')]",
+                    "name": "[variables('webhookName1')]",
                     "dependsOn": [
                         "[parameters('automationAccountName')]",
-                        "[parameters('runbookName')]"
+                        "[parameters('runbookName1')]"
                     ],
                     "properties": {
                         "isEnabled": true,
                         "expiryTime": "[variables('WebhookExpiryTime')]",
                         "runbook": {
-                            "name": "[parameters('runbookName')]"
+                            "name": "[parameters('runbookName1')]"
                         }
                     }
                 },
                 {
-                    "type": "Microsoft.Automation/automationAccounts/schedules",
-                    "apiVersion": "2023-11-01",
-                    "name": "[concat(parameters('automationAccountName'), '/Daily')]",
+                    "type": "runbooks",
+                    "apiVersion": "2018-06-30",
+                    "name": "[parameters('runbookName2')]",
+                    "location": "[resourceGroup().location]",
                     "dependsOn": [
-                        "[resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName'))]"
+                        "[parameters('automationAccountName')]"
                     ],
                     "properties": {
-                        "startTime": "[dateTimeAdd(parameters('baseTime'), 'PT1H')]",
-                        "expiryTime": "9999-12-31T18:59:00-05:00",
-                        "interval": 1,
-                        "frequency": "Day",
-                        "timeZone": "America/Toronto"
+                        "runbookType": "PowerShell",
+                        "logProgress": false,
+                        "logVerbose": false,
+                        "description": "Apply user default settings",
+                        "publishContentLink": {
+                            "uri": "[parameters('runbookPublishContentLink2')]",
+                            "version": "1.0.0.0"
+                        }
                     }
                 },
                 {
-                    "type": "Microsoft.Automation/automationAccounts/jobSchedules",
-                    "apiVersion": "2023-11-01",
-                    "name": "[concat(parameters('automationAccountName'), '/', guid(resourceGroup().id, deployment().name))]",
+                    "type": "webhooks",
+                    "apiVersion": "2018-06-30",
+                    "name": "[variables('webhookName2')]",
                     "dependsOn": [
                         "[parameters('automationAccountName')]",
-                        "[parameters('runbookName')]"
+                        "[parameters('runbookName2')]"
                     ],
                     "properties": {
+                        "isEnabled": true,
+                        "expiryTime": "[variables('WebhookExpiryTime')]",
                         "runbook": {
-                            "name": "[parameters('runbookName')]"
-                        },
-                        "schedule": {
-                            "name": "Daily"
+                            "name": "[parameters('runbookName2')]"
                         }
                     }
                 }
@@ -134,16 +150,27 @@
     ],
     "outputs": {
         "webhook": {
-            "type": "object",
-            "value": {
-                "resourceGroupName": "[resourceGroup().name]",
-                "AutomationAccountName": "[parameters('automationAccountName')]",
-                "name": "[variables('webhookName')]",
-                "uri": "[reference(variables('webhookName')).Uri]",
-                "creationTime": "[reference(variables('webhookName')).CreationTime]",
-                "expiryTime": "[reference(variables('webhookName')).ExpiryTime]",
-                "lastModifiedTime": "[reference(variables('webhookName')).LastModifiedTime]"
-            }
+            "type": "Array",
+            "value": [
+                {
+                    "resourceGroupName": "[resourceGroup().name]",
+                    "AutomationAccountName": "[parameters('automationAccountName')]",
+                    "name": "[variables('webhookName1')]",
+                    "uri": "[reference(variables('webhookName1')).Uri]",
+                    "creationTime": "[reference(variables('webhookName1')).CreationTime]",
+                    "expiryTime": "[reference(variables('webhookName1')).ExpiryTime]",
+                    "lastModifiedTime": "[reference(variables('webhookName1')).LastModifiedTime]"
+                },
+                {
+                    "resourceGroupName": "[resourceGroup().name]",
+                    "AutomationAccountName": "[parameters('automationAccountName')]",
+                    "name": "[variables('webhookName2')]",
+                    "uri": "[reference(variables('webhookName2')).Uri]",
+                    "creationTime": "[reference(variables('webhookName2')).CreationTime]",
+                    "expiryTime": "[reference(variables('webhookName2')).ExpiryTime]",
+                    "lastModifiedTime": "[reference(variables('webhookName2')).LastModifiedTime]"
+                }
+            ]
         },
         "automationAccountName": {
             "type": "String",

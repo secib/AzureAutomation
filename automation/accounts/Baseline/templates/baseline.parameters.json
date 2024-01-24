@@ -8,17 +8,19 @@
         "runbookName": {
             "value": "default"
         },
+        "runbookPublishContentLink": {
+            "value": "https://dev.azure.com/AzDeploymentToolkitTestProject/AzDeploymentToolKitTest/_apis/git/repositories/2fc13ae2-c67a-4aac-b9c2-f9db228d1eb5/items?path=/automation/accounts/Baseline/runbooks/default.ps1&api-version=5.1"
+        },
         "automationLocation": {
             "value": "francecentral"
         },
         "initialDomain": {
-            "value": "test.onmicrosoft.com"
+            "value": "secib143.onmicrosoft.com"
         },
         "sourceControl": {
             "value": {
-                "name": "SCGitHub",
-                "repositoryAccountName": "secib",
-                "repositoryName": "AzureAutomation",
+                "name": "SCReposGit",
+                "RepositoryUrl": "https://AzDeploymentToolkitTestProject@dev.azure.com/AzDeploymentToolkitTestProject/AzDeploymentToolKitTest/_git/AzDeploymentToolKitTest",
                 "branch": "main",
                 "folderPath": "automation/accounts/Baseline/runbooks"
             }

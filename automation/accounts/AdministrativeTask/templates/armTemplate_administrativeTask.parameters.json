@@ -11,14 +11,15 @@
         "runbookName": {
             "value": "Set-AADUser"
         },
+        "runbookPublishContentLink": {
+            "value": "https://dev.azure.com/AzDeploymentToolkitTestProject/AzDeploymentToolKitTest/_apis/git/repositories/2fc13ae2-c67a-4aac-b9c2-f9db228d1eb5/items?path=/automation/accounts/AdministrativeTask/runbooks/Set-AADUser.ps1&api-version=5.1"
+        },
         "sourceControl": {
             "value": {
-                "name": "SCGitHub",
-                "repositoryAccountName": "secib",
-                "repositoryName": "AzureAutomation",
+                "name": "SCReposGit",
+                "RepositoryUrl": "https://AzDeploymentToolkitTestProject@dev.azure.com/AzDeploymentToolkitTestProject/AzDeploymentToolKitTest/_git/AzDeploymentToolKitTest",
                 "branch": "main",
-                "folderPath": "automation/accounts/AdministrativeTask/runbooks",
-                "rawBaseUri": "https://raw.githubusercontent.com/"
+                "folderPath": "automation/accounts/AdministrativeTask/runbooks"
             }
         }
     }

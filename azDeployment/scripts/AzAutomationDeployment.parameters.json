@@ -1,0 +1,14 @@
+{
+    "AutomationAccountDeploymentBuilders": [
+        {
+            "SubscriptionName": "Abonnement Azure 1",
+            "ResourceGroupDeployment": {
+                "ResourceGroupName": "AzDeployment",
+                "TemplateUri": "https://dev.azure.com/AzDeploymentToolkitTestProject/AzDeploymentToolKitTest/_apis/git/repositories/2fc13ae2-c67a-4aac-b9c2-f9db228d1eb5/items?path=/azDeployment/accounts/DeploymentToolKit/templates/deploymentToolkit.json&api-version=5.1",
+                "TemplateParameterUri": "https://dev.azure.com/AzDeploymentToolkitTestProject/AzDeploymentToolKitTest/_apis/git/repositories/2fc13ae2-c67a-4aac-b9c2-f9db228d1eb5/items?path=/azDeployment/accounts/DeploymentToolKit/templates/deploymentToolkit.parameters.json&api-version=5.1"
+            },
+            "ApplicationRoleAssignments": [],
+            "DirectoryRoles": []
+        }
+    ]
+}

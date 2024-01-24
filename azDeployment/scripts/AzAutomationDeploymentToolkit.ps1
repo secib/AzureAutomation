@@ -41,7 +41,7 @@ class AutomationSourceControlDeploymentBuilder
 class AutomationAccountDeploymentOutput
 {
     [SourceControlOuput]$SourceControl
-    [WebhookOutput]$Webhook
+    [WebhookOutput[]]$Webhook
     [string]$AutomationAccountName
 }
 

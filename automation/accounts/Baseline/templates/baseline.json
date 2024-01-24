@@ -14,6 +14,12 @@
                 "description": "Runbook name"
             }
         },
+        "runbookPublishContentLink": {
+            "type": "String",
+            "metadata": {
+                "description": "Runbook content link"
+            }
+        },
         "automationLocation": {
             "type": "string",
             "metadata": {
@@ -38,8 +44,6 @@
         }
     },
     "variables": {
-        "baseUri": "[concat('https://raw.githubusercontent.com/', parameters('sourceControl').repositoryAccountName, '/', parameters('sourceControl').repositoryName, '/', parameters('sourceControl').branch, '/', parameters('sourceControl').folderPath, '/')]",
-        "runbookScript": "[concat(parameters('runbookName'), '.ps1')]",
         "webhookName": "[concat(parameters('runbookName'), 'Webhook')]",
         "WebhookExpiryTime": "[dateTimeAdd(parameters('baseTime'), 'P1Y')]",
         "webhookData": "[concat('{\"WebhookName\":\"defaultWebhook\",\"RequestBody\":\"{\\\"organization\\\":\\\"', parameters('initialDomain'), '\\\"}\"}')]"
@@ -79,7 +83,7 @@
                         "logVerbose": false,
                         "description": "Apply user default settings",
                         "publishContentLink": {
-                            "uri": "[uri(variables('baseUri'), variables('runbookScript'))]",
+                            "uri": "[parameters('runbookPublishContentLink')]",
                             "version": "1.0.0.0"
                         }
                     }
