@@ -25,3 +25,4 @@ $null = Set-AzContext -Subscription $SubscriptionName -ErrorAction Stop
 
 $secureAccessToken = ConvertTo-SecureString -String $AccessToken -AsPlainText -Force
 Get-AzAutomationSourceControl -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name $SourceControlName | Update-AzAutomationSourceControl -AccessToken $secureAccessToken
+#
