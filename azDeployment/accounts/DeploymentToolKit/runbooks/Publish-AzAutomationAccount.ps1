@@ -163,6 +163,7 @@ function New-ServicePrincipalAppRoleAssignment
         $ApplicationRoleAssignment
     )
 
+    Get-GraphServicePrincipal | Where-Object { $_.servicePrincipalType -eq "ManagedIdentity" }
     $servicePrincipal = Get-GraphServicePrincipal | Where-Object { $_.id -eq $ServicePrincipalId } | Select-Object -First 1
     if (!$servicePrincipal) { throw "Service principal with id '$ServicePrincipalId' not found" }
     
@@ -243,7 +244,8 @@ finally
 Disable-AzContextAutosave -Scope Process
 
 # Connect to Azure with system-assigned managed identity 
-$null = (Connect-AzAccount -Identity).context
+# $null = (Connect-AzAccount -Identity).context
+$null = (Connect-AzAccount).context
 
 foreach ($builder in $configurationFile.AutomationAccountDeploymentBuilders)
 {
