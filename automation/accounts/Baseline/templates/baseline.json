@@ -174,10 +174,6 @@
         "automationAccountName": {
             "type": "String",
             "value": "[parameters('automationAccountName')]"
-        },
-        "sourceControl": {
-            "type": "object",
-            "value": "[parameters('sourceControl')]"
         }
     }
 }
