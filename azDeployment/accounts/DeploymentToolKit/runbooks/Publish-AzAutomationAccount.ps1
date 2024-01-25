@@ -220,6 +220,32 @@ function New-DirectoryRoleMember
     $roleAssignment | Out-Host
 }
 
+function Get-AzToken
+{
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true)]
+        [String]
+        $ResourceUri,
+        [Parameter(Mandatory = $false)]
+        [String]
+        $TenantId,
+        [Switch]$AsHeader
+    )
+    
+    $Context = [Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmProfileProvider]::Instance.Profile.DefaultContext
+    if ([string]::IsNullOrEmpty($TenantId))
+    {
+        $TenantId = $context.Tenant.Id.ToString()
+    }
+    $Token = [Microsoft.Azure.Commands.Common.Authentication.AzureSession]::Instance.AuthenticationFactory.Authenticate($context.Account, $context.Environment, $TenantId, $null, [Microsoft.Azure.Commands.Common.Authentication.ShowDialog]::Never, $null, $ResourceUri).AccessToken
+    if ($AsHeader)
+    {
+        return @{Headers = @{Authorization = "Bearer $Token" } }
+    }
+    return $Token
+}
+
 # Logic to allow for testing in Test pane
 if (-Not $WebhookData.RequestBody)
 { 
@@ -280,10 +306,10 @@ foreach ($builder in $configurationFile.AutomationAccountDeploymentBuilders)
     if ($Builder.ApplicationRoleAssignments.Count -gt 0)
     {
         Write-Output $subscription.HomeTenantId
-        $accessToken = (Get-AzAccessToken -ResourceTypeName MSGraph -TenantId $subscription.HomeTenantId).token
+        $accessToken = Get-AzToken -ResourceUri 'https://graph.microsoft.com/' -TenantId $subscription.HomeTenantId
         Write-Output $accessToken
         $null = Connect-Graph -AccessToken $accessToken
-        
+
         foreach ($assignment in $Builder.ApplicationRoleAssignments)
         {
             $params = @{
@@ -299,7 +325,7 @@ foreach ($builder in $configurationFile.AutomationAccountDeploymentBuilders)
     if ($Builder.DirectoryRoles.Count -gt 0)
     {
         Write-Output $subscription.HomeTenantId
-        $accessToken = (Get-AzAccessToken -ResourceTypeName MSGraph -TenantId $subscription.HomeTenantId).token
+        $accessToken = Get-AzToken -ResourceUri 'https://graph.microsoft.com/' -TenantId $subscription.HomeTenantId
         Write-Output $accessToken
         $null = Connect-Graph -AccessToken $accessToken
         $managedIdentityId = Get-azAutomationAccount -ResourceGroupName $Builder.ResourceGroupDeployment.ResourceGroupName -AutomationAccountName $deploymentOutput.AutomationAccountName | Select-Object -ExpandProperty Identity | Select-Object -ExpandProperty PrincipalId
