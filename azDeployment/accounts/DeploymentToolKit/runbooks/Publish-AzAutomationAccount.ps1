@@ -249,10 +249,11 @@ $null = (Connect-AzAccount -Identity).context
 foreach ($builder in $configurationFile.AutomationAccountDeploymentBuilders)
 {
     $subscription = Get-AzSubscription -SubscriptionId $builder.SubscriptionId
+    $subscription | Format-List *
     $azContext = Set-AzContext -Subscription $subscription.Id -ErrorAction Stop
     $deploymentOutput = New-ResourceGroupDeployment -Builder $builder.ResourceGroupDeployment -Verbose
-    $deploymentOutput.Webhook | Out-Host
-
+    Write-Output $deploymentOutput
+    
     # save webhookUri
     if (!([string]::IsNullOrEmpty($deploymentOutput.Webhook.Uri)))
     {
