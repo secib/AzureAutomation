@@ -15,7 +15,13 @@
             "value": "https://raw.githubusercontent.com/secib/AzureAutomation/main/automation/accounts/AdministrativeTask/runbooks/Set-AADUser.ps1"
         },
         "sourceControl": {
-            "value": null
+            "value": {
+                "name": "SCReposGit",
+                "sourceType": "GitHub",
+                "RepositoryUrl": "https://github.com/secib/AzureAutomation.git",
+                "branch": "main",
+                "folderPath": "automation/accounts/AdministrativeTask/runbooks"
+            }
         }
     }
 }

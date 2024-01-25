@@ -18,7 +18,13 @@
             "value": "secib143.onmicrosoft.com"
         },
         "sourceControl": {
-            "value": null
+            "value": {
+                "name": "SCReposGit",
+                "sourceType": "GitHub",
+                "RepositoryUrl": "https://github.com/secib/AzureAutomation.git",
+                "branch": "main",
+                "folderPath": "automation/accounts/Baseline/runbooks"
+            }
         }
     }
 }
