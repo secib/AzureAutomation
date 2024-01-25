@@ -253,7 +253,7 @@ foreach ($builder in $configurationFile.AutomationAccountDeploymentBuilders)
     $azContext = Set-AzContext -Subscription $subscription.Id -ErrorAction Stop
     $deploymentOutput = New-ResourceGroupDeployment -Builder $builder.ResourceGroupDeployment -Verbose
     Write-Output $deploymentOutput
-    
+
     # save webhookUri
     if (!([string]::IsNullOrEmpty($deploymentOutput.Webhook.Uri)))
     {
@@ -279,7 +279,11 @@ foreach ($builder in $configurationFile.AutomationAccountDeploymentBuilders)
     # Grant account required permissions
     if ($Builder.ApplicationRoleAssignments.Count -gt 0)
     {
-        $null = Connect-Graph -AccessToken ((Get-AzAccessToken -ResourceTypeName MSGraph -TenantId $subscription.HomeTenantId).token)    
+        Write-Output $subscription.HomeTenantId
+        $accessToken = (Get-AzAccessToken -ResourceTypeName MSGraph -TenantId $subscription.HomeTenantId).token
+        Write-Output $accessToken
+        $null = Connect-Graph -AccessToken $accessToken
+        
         foreach ($assignment in $Builder.ApplicationRoleAssignments)
         {
             $params = @{
@@ -294,7 +298,10 @@ foreach ($builder in $configurationFile.AutomationAccountDeploymentBuilders)
     #Grant account required directory roles
     if ($Builder.DirectoryRoles.Count -gt 0)
     {
-        $null = Connect-Graph -AccessToken ((Get-AzAccessToken -ResourceTypeName MSGraph -TenantId $subscription.HomeTenantId).token)
+        Write-Output $subscription.HomeTenantId
+        $accessToken = (Get-AzAccessToken -ResourceTypeName MSGraph -TenantId $subscription.HomeTenantId).token
+        Write-Output $accessToken
+        $null = Connect-Graph -AccessToken $accessToken
         $managedIdentityId = Get-azAutomationAccount -ResourceGroupName $Builder.ResourceGroupDeployment.ResourceGroupName -AutomationAccountName $deploymentOutput.AutomationAccountName | Select-Object -ExpandProperty Identity | Select-Object -ExpandProperty PrincipalId
 
         foreach ($directoryRoleName in $Builder.DirectoryRoles)
