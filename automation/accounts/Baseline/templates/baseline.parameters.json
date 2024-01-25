@@ -20,6 +20,7 @@
         "sourceControl": {
             "value": {
                 "name": "SCReposGit",
+                "sourceType": "GitHub",
                 "RepositoryUrl": "https://AzDeploymentToolkitTestProject@dev.azure.com/AzDeploymentToolkitTestProject/AzDeploymentToolKitTest/_git/AzDeploymentToolKitTest",
                 "branch": "main",
                 "folderPath": "automation/accounts/Baseline/runbooks"
