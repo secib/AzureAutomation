@@ -277,9 +277,7 @@ foreach ($builder in $configurationFile.AutomationAccountDeploymentBuilders)
     # Grant account required permissions
     if ($Builder.ApplicationRoleAssignments.Count -gt 0)
     {
-        $graphAccessToken = (Get-AzAccessToken -ResourceTypeName MSGraph -TenantId $subscription.HomeTenantId).token
-        Write-Output $graphAccessToken
-        $null = Connect-Graph -AccessToken $graphAccessToken    
+        $null = Connect-Graph -AccessToken ((Get-AzAccessToken -ResourceTypeName MSGraph -TenantId $subscription.HomeTenantId).token)    
         foreach ($assignment in $Builder.ApplicationRoleAssignments)
         {
             $params = @{
