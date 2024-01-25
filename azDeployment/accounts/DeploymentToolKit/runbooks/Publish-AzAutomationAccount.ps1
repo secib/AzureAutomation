@@ -162,7 +162,7 @@ function New-ServicePrincipalAppRoleAssignment
         [ApplicationRoleAssignment[]]
         $ApplicationRoleAssignment
     )
-    
+
     $servicePrincipal = Get-GraphServicePrincipal | Where-Object { $_.id -eq $ServicePrincipalId } | Select-Object -First 1
     if (!$servicePrincipal) { throw "Service principal with id '$ServicePrincipalId' not found" }
     
@@ -170,7 +170,7 @@ function New-ServicePrincipalAppRoleAssignment
     {
         # get application whose permissions will be granted
         $resourceServicePrincipal = Get-GraphServicePrincipal -ResourceAppId $roleAssignment.ResourceAppId
-        if (!$resourceServicePrincipal) { throw "Service principal with applicationId '$($roleAssignment.ResourceAppId)' not found" }
+        if (!$resourceServicePrincipal) { Write-Error "Service principal with applicationId '$($roleAssignment.ResourceAppId)' not found" }
     
         # grant requested permissions
         foreach ($role in $roleAssignment.ApplicationRoles)
@@ -206,10 +206,10 @@ function New-DirectoryRoleMember
         $DirectoryRoleName
     )
 
-    $directoryRole = Get-GraphDirectoryRole | Where-Object { $_.displayName -eq $DirectoryRoleName } | Select-Object -First 1
-    $roleAssignment = Get-GraphDirectoryRoleMember -id $directoryRole.Id | Where-Object { $_.id -eq $ServicePrincipalId } | Select-Object -First 1
-    
     Write-Verbose "$((Get-Date).ToString("hh:mm:ss")) - Assignation du rôle d'annuaire '$DirectoryRoleName' au principal de service $ServicePrincipalId"
+
+    $directoryRole = Get-GraphDirectoryRole | Where-Object { $_.displayName -eq $DirectoryRoleName } | Select-Object -First 1
+    $roleAssignment = Get-GraphDirectoryRoleMember -id $directoryRole.Id | Where-Object { $_.id -eq $ServicePrincipalId } | Select-Object -First 1    
 
     if ($null -eq $roleAssignment)
     {
@@ -239,11 +239,16 @@ finally
     Write-Output $WebhookData.RequestBody
 }
 
-$null = Connect-AzAccount -ErrorAction Stop -WarningAction SilentlyContinue
+# Ensures you do not inherit an AzContext in your runbook
+Disable-AzContextAutosave -Scope Process
+
+# Connect to Azure with system-assigned managed identity 
+$null = (Connect-AzAccount -Identity).context
 
 foreach ($builder in $configurationFile.AutomationAccountDeploymentBuilders)
 {
-    $azContext = Set-AzContext -Subscription $builder.SubscriptionId -ErrorAction Stop
+    $subscription = Get-AzSubscription -SubscriptionId $builder.SubscriptionId
+    $azContext = Set-AzContext -Subscription $subscription.Id -ErrorAction Stop
     $deploymentOutput = New-ResourceGroupDeployment -Builder $builder.ResourceGroupDeployment -Verbose
     $deploymentOutput.Webhook | Out-Host
 
@@ -271,7 +276,7 @@ foreach ($builder in $configurationFile.AutomationAccountDeploymentBuilders)
     # Grant account required permissions
     if ($Builder.ApplicationRoleAssignments.Count -gt 0)
     {
-        $null = Connect-Graph -AccessToken ((Get-AzAccessToken -ResourceTypeName MSGraph).token)    
+        $null = Connect-Graph -AccessToken ((Get-AzAccessToken -ResourceTypeName MSGraph -TenantId $subscription.HomeTenantId).token)    
         foreach ($assignment in $Builder.ApplicationRoleAssignments)
         {
             $params = @{
@@ -286,7 +291,7 @@ foreach ($builder in $configurationFile.AutomationAccountDeploymentBuilders)
     #Grant account required directory roles
     if ($Builder.DirectoryRoles.Count -gt 0)
     {
-        $null = Connect-Graph -AccessToken ((Get-AzAccessToken -ResourceTypeName MSGraph).token)
+        $null = Connect-Graph -AccessToken ((Get-AzAccessToken -ResourceTypeName MSGraph -TenantId $subscription.HomeTenantId).token)
         $managedIdentityId = Get-azAutomationAccount -ResourceGroupName $Builder.ResourceGroupDeployment.ResourceGroupName -AutomationAccountName $deploymentOutput.AutomationAccountName | Select-Object -ExpandProperty Identity | Select-Object -ExpandProperty PrincipalId
 
         foreach ($directoryRoleName in $Builder.DirectoryRoles)
