@@ -1,12 +1,22 @@
+[CmdletBinding(DefaultParameterSetName = 'Webhook')]
+param (
+    [Parameter(ParameterSetName = 'Webhook', Mandatory)]
+    [object]
+    $WebhookData,
+
+    [Parameter(ParameterSetName = 'ConfigurationFile', Mandatory)]
+    [string]
+    $Path
+)
+
 class ConfigurationFile
 {
-    [string]$ApplicationId
     [AutomationAccountDeploymentBuilder[]]$AutomationAccountDeploymentBuilders
 }
 
 class AutomationAccountDeploymentBuilder
 {
-    [string]$SubscriptionName
+    [string]$SubscriptionId
     [ResourceGroupDeployment]$ResourceGroupDeployment
     [ApplicationRoleAssignment[]]$ApplicationRoleAssignments
     [string[]]$DirectoryRoles
@@ -218,15 +228,15 @@ function Start-AzAutomationDeployment
     [CmdletBinding()]
     param (
         [Parameter(Mandatory)]
-        [string]
-        $Path
+        [ConfigurationFile]
+        $ConfigurationFile
     )
 
-    [ConfigurationFile]$configurationFile = Get-Content -Encoding UTF8 -Raw -Path $Path | ConvertFrom-Json -ErrorAction Stop
+    $null = Connect-AzAccount -ErrorAction Stop -WarningAction SilentlyContinue
 
     foreach ($builder in $configurationFile.AutomationAccountDeploymentBuilders)
     {
-        $azContext = Set-AzContext -Subscription $builder.SubscriptionName -ErrorAction Stop
+        $azContext = Set-AzContext -Subscription $builder.SubscriptionId -ErrorAction Stop
         $deploymentOutput = New-ResourceGroupDeployment -Builder $builder.ResourceGroupDeployment -Verbose
         $deploymentOutput.Webhook | Out-Host
 
@@ -281,6 +291,38 @@ function Start-AzAutomationDeployment
     }
 }
 
-$null = Connect-AzAccount -ErrorAction Stop -WarningAction SilentlyContinue
 
-Start-AzAutomationDeployment -Path (Join-Path $PSScriptRoot "AzAutomationDeployment.parameters.json")
+switch ($PSCmdlet.ParameterSetName)
+{
+    "Webhook"
+    {
+        # Logic to allow for testing in Test pane
+        if (-Not $WebhookData.RequestBody)
+        { 
+            $WebhookData = $WebhookData | ConvertFrom-Json
+        }
+
+        try
+        {
+            [ConfigurationFile]$configurationFile = $WebhookData.RequestBody | ConvertFrom-Json -ErrorAction Stop
+        }
+        catch
+        {
+            Write-Error "Unexpected request body."
+            exit
+        }
+        finally
+        {
+            Write-Output $WebhookData.RequestBody
+        }
+
+        Start-AzAutomationDeployment -ConfigurationFile $configurationFile
+    }
+
+    "ConfigurationFile"
+    {
+        [ConfigurationFile]$configurationFile = Get-Content -Encoding UTF8 -Raw -Path $Path | ConvertFrom-Json -ErrorAction Stop
+
+        Start-AzAutomationDeployment -ConfigurationFile $configurationFile
+    }
+}

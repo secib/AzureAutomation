@@ -1,7 +1,7 @@
 {
     "AutomationAccountDeploymentBuilders": [
         {
-            "SubscriptionName": "Abonnement Azure 1",
+            "SubscriptionId": "Abonnement Azure 1",
             "ResourceGroupDeployment": {
                 "ResourceGroupName": "AzDeployment",
                 "TemplateUri": "https://raw.githubusercontent.com/secib/AzureAutomation/main/azDeployment/accounts/DeploymentToolKit/templates/deploymentToolkit.json",

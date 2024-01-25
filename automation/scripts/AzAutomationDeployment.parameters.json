@@ -1,12 +1,11 @@
 {
-    "ApplicationId": "1ec3522a-6bec-4ea9-861d-1c01f2ae953f",
     "AutomationAccountDeploymentBuilders": [
         {
-            "SubscriptionName": "Crayon",
+            "SubscriptionId": "Crayon",
             "ResourceGroupDeployment": {
                 "ResourceGroupName": "Automation",
-                "TemplateUri": "https://dev.azure.com/AzDeploymentToolkitTestProject/AzDeploymentToolKitTest/_apis/git/repositories/2fc13ae2-c67a-4aac-b9c2-f9db228d1eb5/items?path=/automation/accounts/AdministrativeTask/templates/armTemplate_administrativeTask.json&api-version=5.1",
-                "TemplateParameterUri": "https://dev.azure.com/AzDeploymentToolkitTestProject/AzDeploymentToolKitTest/_apis/git/repositories/2fc13ae2-c67a-4aac-b9c2-f9db228d1eb5/items?path=/automation/accounts/AdministrativeTask/templates/armTemplate_administrativeTask.parameters.json&api-version=5.1"
+                "TemplateUri": "https://raw.githubusercontent.com/secib/AzureAutomation/main/automation/accounts/AdministrativeTask/templates/armTemplate_administrativeTask.json",
+                "TemplateParameterUri": "https://raw.githubusercontent.com/secib/AzureAutomation/main/automation/accounts/AdministrativeTask/templates/armTemplate_administrativeTask.parameters.json"
             },
             "ApplicationRoleAssignments": [
                 {
@@ -19,11 +18,11 @@
             "DirectoryRoles": []
         },
         {
-            "SubscriptionName": "Crayon",
+            "SubscriptionId": "Crayon",
             "ResourceGroupDeployment": {
                 "ResourceGroupName": "Automation",
-                "TemplateUri": "https://dev.azure.com/AzDeploymentToolkitTestProject/AzDeploymentToolKitTest/_apis/git/repositories/2fc13ae2-c67a-4aac-b9c2-f9db228d1eb5/items?path=/automation/accounts/Baseline/templates/baseline.json&api-version=5.1",
-                "TemplateParameterUri": "https://dev.azure.com/AzDeploymentToolkitTestProject/AzDeploymentToolKitTest/_apis/git/repositories/2fc13ae2-c67a-4aac-b9c2-f9db228d1eb5/items?path=/automation/accounts/Baseline/templates/baseline.parameters.json&api-version=5.1"
+                "TemplateUri": "https://raw.githubusercontent.com/secib/AzureAutomation/main/automation/accounts/Baseline/templates/baseline.json",
+                "TemplateParameterUri": "https://raw.githubusercontent.com/secib/AzureAutomation/main/automation/accounts/Baseline/templates/baseline.parameters.json"
             },
             "ApplicationRoleAssignments": [
                 {

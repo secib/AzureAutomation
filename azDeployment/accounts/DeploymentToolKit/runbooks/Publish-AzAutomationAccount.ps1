@@ -1,19 +1,18 @@
 [CmdletBinding()]
 param (
-    [Parameter()]
+    [Parameter(Mandatory)]
     [object]
     $WebhookData
 )
 
-class WebhookRequestBody
+class ConfigurationFile
 {
-    [string]$SubscriptionId
-    [AutomationAccountDeploymentBuilder]$TemplateObject
+    [AutomationAccountDeploymentBuilder[]]$AutomationAccountDeploymentBuilders
 }
 
 class AutomationAccountDeploymentBuilder
 {
-    [string]$SubscriptionName
+    [string]$SubscriptionId
     [ResourceGroupDeployment]$ResourceGroupDeployment
     [ApplicationRoleAssignment[]]$ApplicationRoleAssignments
     [string[]]$DirectoryRoles
@@ -32,34 +31,20 @@ class ApplicationRoleAssignment
     [string[]]$ApplicationRoles
 }
 
-class AutomationSourceControlDeploymentBuilder
-{
-    [string]$Name
-    [string]$RepoUrl
-    [string]$SourceType
-    [string]$Branch
-    [string]$FolderPath
-    [securestring]$AccessToken
-    [string]$ResourceGroupName
-    [string]$AutomationAccountName
-    [bool]$EnableAutoSync
-}
-
 class AutomationAccountDeploymentOutput
 {
     [SourceControlOuput]$SourceControl
-    [WebhookOutput]$Webhook
+    [WebhookOutput[]]$Webhook
     [string]$AutomationAccountName
 }
 
 class SourceControlOuput
 {
     [string]$Name
-    [string]$RepositoryAccountName
-    [string]$RepositoryName
+    [string]$RepositoryUrl
     [string]$Branch
     [string]$FolderPath
-    [string]$RawBaseUri
+    [string]$SourceType
 }
 
 class WebhookOutput
@@ -151,11 +136,11 @@ function New-AutomationSourceControlDeployment
             Name                  = $SourceControl.Name
             ResourceGroupName     = $ResourceGroupName
             AutomationAccountName = $AutomationAccountName
-            SourceType            = "VsoGit"
-            RepoUrl               = "https://dev.azure.com/{0}/{1}/_git/{2}" -f "AzDeploymentToolkitTestProject", "AzDeploymentToolKitTest", "AzDeploymentToolKitTest"
+            SourceType            = $SourceControl.SourceType
+            RepoUrl               = $SourceControl.RepositoryUrl
             Branch                = $SourceControl.Branch
             FolderPath            = $SourceControl.FolderPath
-            AccessToken           = (Get-AzKeyVaultSecret -VaultName 'AzAutomation-Keyvault' -Name 'Ado-PAT-SourceControl').SecretValue
+            AccessToken           = Read-Host -AsSecureString -Prompt "PAT"
             EnableAutoSync        = $true
         }
 
@@ -165,20 +150,101 @@ function New-AutomationSourceControlDeployment
     $automationSourceControl | Out-Host
 }
 
-function Publish-AzAutomationAccount
+function New-ServicePrincipalAppRoleAssignment
 {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory)]
         [string]
-        $SubscriptionId,
+        $ServicePrincipalId,
+    
+        [Parameter(Mandatory)]
+        [ApplicationRoleAssignment[]]
+        $ApplicationRoleAssignment
+    )
+    
+    $servicePrincipal = Get-GraphServicePrincipal | Where-Object { $_.id -eq $ServicePrincipalId } | Select-Object -First 1
+    if (!$servicePrincipal) { throw "Service principal with id '$ServicePrincipalId' not found" }
+    
+    foreach ($roleAssignment in $ApplicationRoleAssignment)
+    {
+        # get application whose permissions will be granted
+        $resourceServicePrincipal = Get-GraphServicePrincipal -ResourceAppId $roleAssignment.ResourceAppId
+        if (!$resourceServicePrincipal) { throw "Service principal with applicationId '$($roleAssignment.ResourceAppId)' not found" }
+    
+        # grant requested permissions
+        foreach ($role in $roleAssignment.ApplicationRoles)
+        {
+            $appRole = $resourceServicePrincipal.appRoles | Where-Object { $_.Value -eq $role -and $_.allowedMemberTypes -contains "Application" }
+            if (!$appRole)
+            {
+                Write-Warning "Application permission '$role' not found in '$($roleAssignment.ResourceAppId)' application"
+                continue
+            }
+    
+            Write-Verbose "$((Get-Date).ToString("hh:mm:ss")) - Assignation du rôle '$role' au principal de service $ServicePrincipalId"
+            $appRoleAssignment = Get-GraphServicePrincipalAppRoleAssignment -ObjectId $ServicePrincipalId | Where-Object { $_.appRoleId -eq $appRole.id }
+            if (!$appRoleAssignment)
+            {
+                $appRoleAssignment = New-GraphServicePrincipalAppRoleAssignment -ServicePrincipalId $ServicePrincipalId -ResourceId $resourceServicePrincipal.id -AppRoleId $appRole.id
+            }
+            $appRoleAssignment | Out-Host
+        }
+    }    
+}
+
+function New-DirectoryRoleMember
+{
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory)]
+        [string]
+        $ServicePrincipalId,
 
         [Parameter(Mandatory)]
-        [AutomationAccountDeploymentBuilder]
-        $TemplateObject
+        [string]
+        $DirectoryRoleName
     )
 
-    $deploymentOutput = New-ResourceGroupDeployment -Builder $TemplateObject.ResourceGroupDeployment -Verbose
+    $directoryRole = Get-GraphDirectoryRole | Where-Object { $_.displayName -eq $DirectoryRoleName } | Select-Object -First 1
+    $roleAssignment = Get-GraphDirectoryRoleMember -id $directoryRole.Id | Where-Object { $_.id -eq $ServicePrincipalId } | Select-Object -First 1
+    
+    Write-Verbose "$((Get-Date).ToString("hh:mm:ss")) - Assignation du rôle d'annuaire '$DirectoryRoleName' au principal de service $ServicePrincipalId"
+
+    if ($null -eq $roleAssignment)
+    {
+        $null = New-GraphDirectoryRoleMember -DirectoryRoleId $directoryRole.Id -ObjectId $ServicePrincipalId
+    }
+    
+    $roleAssignment | Out-Host
+}
+
+# Logic to allow for testing in Test pane
+if (-Not $WebhookData.RequestBody)
+{ 
+    $WebhookData = $WebhookData | ConvertFrom-Json
+}
+
+try
+{
+    [ConfigurationFile]$configurationFile = $WebhookData.RequestBody | ConvertFrom-Json -ErrorAction Stop
+}
+catch
+{
+    Write-Error "Unexpected request body."
+    exit
+}
+finally
+{
+    Write-Output $WebhookData.RequestBody
+}
+
+$null = Connect-AzAccount -ErrorAction Stop -WarningAction SilentlyContinue
+
+foreach ($builder in $configurationFile.AutomationAccountDeploymentBuilders)
+{
+    $azContext = Set-AzContext -Subscription $builder.SubscriptionId -ErrorAction Stop
+    $deploymentOutput = New-ResourceGroupDeployment -Builder $builder.ResourceGroupDeployment -Verbose
     $deploymentOutput.Webhook | Out-Host
 
     # save webhookUri
@@ -193,11 +259,11 @@ function Publish-AzAutomationAccount
     {
         $params = @{
             SourceControl         = $deploymentOutput.SourceControl
-            SubscriptionId        = $SubscriptionId
-            ResourceGroupName     = $TemplateObject.ResourceGroupDeployment.ResourceGroupName
+            SubscriptionId        = $azContext.Subscription.Id
+            ResourceGroupName     = $Builder.ResourceGroupDeployment.ResourceGroupName
             AutomationAccountName = $deploymentOutput.AutomationAccountName
         }
-    
+
         $automationSourceControl = New-AutomationSourceControlDeployment @params -Verbose
         $automationSourceControl | Out-Host
     }
@@ -205,54 +271,27 @@ function Publish-AzAutomationAccount
     # Grant account required permissions
     if ($Builder.ApplicationRoleAssignments.Count -gt 0)
     {
+        $null = Connect-Graph -AccessToken ((Get-AzAccessToken -ResourceTypeName MSGraph).token)    
         foreach ($assignment in $Builder.ApplicationRoleAssignments)
         {
             $params = @{
-                ServicePrincipalId        = Get-azAutomationAccount -ResourceGroupName $TemplateObject.ResourceGroupDeployment.ResourceGroupName -AutomationAccountName $deploymentOutput.AutomationAccountName | Select-Object -ExpandProperty Identity | Select-Object -ExpandProperty PrincipalId
+                ServicePrincipalId        = Get-azAutomationAccount -ResourceGroupName $Builder.ResourceGroupDeployment.ResourceGroupName -AutomationAccountName $deploymentOutput.AutomationAccountName | Select-Object -ExpandProperty Identity | Select-Object -ExpandProperty PrincipalId
                 ApplicationRoleAssignment = $assignment
             }
-        
+    
             New-ServicePrincipalAppRoleAssignment @params -Verbose
         }
     }
-    
+
     #Grant account required directory roles
     if ($Builder.DirectoryRoles.Count -gt 0)
     {
-        $managedIdentityId = Get-azAutomationAccount -ResourceGroupName $TemplateObject.ResourceGroupDeployment.ResourceGroupName -AutomationAccountName $deploymentOutput.AutomationAccountName | Select-Object -ExpandProperty Identity | Select-Object -ExpandProperty PrincipalId
-    
+        $null = Connect-Graph -AccessToken ((Get-AzAccessToken -ResourceTypeName MSGraph).token)
+        $managedIdentityId = Get-azAutomationAccount -ResourceGroupName $Builder.ResourceGroupDeployment.ResourceGroupName -AutomationAccountName $deploymentOutput.AutomationAccountName | Select-Object -ExpandProperty Identity | Select-Object -ExpandProperty PrincipalId
+
         foreach ($directoryRoleName in $Builder.DirectoryRoles)
         {
             New-DirectoryRoleMember -ServicePrincipalId $managedIdentityId -DirectoryRoleName $directoryRoleName -Verbose
         }
-    }
+    }    
 }
-
-Import-Module Graph
-
-# Logic to allow for testing in Test pane
-if (-Not $WebhookData.RequestBody)
-{ 
-    $WebhookData = $WebhookData | ConvertFrom-Json
-}
-
-try
-{
-    [WebhookRequestBody]$requestBody = $WebhookData.RequestBody | ConvertFrom-Json -ErrorAction Stop
-}
-catch
-{
-    Write-Error "Unexpected request body."
-    exit
-}
-finally
-{
-    Write-Output $WebhookData.RequestBody
-}
-
-$null = Connect-AzAccount -Identity -ErrorAction Stop
-$subscription = Get-AzSubscription -SubscriptionId $requestBody.SubscriptionId
-$azContext = Set-AzContext -Subscription $subscription.Id -ErrorAction Stop
-$null = Connect-Graph -AccessToken ((Get-AzAccessToken -ResourceTypeName MSGraph -TenantId $subscription.HomeTenantId ).token)
-
-Publish-AzAutomationAccount -SubscriptionId $requestBody.subscriptionId -TemplateObject $requestBody.TemplateObject
