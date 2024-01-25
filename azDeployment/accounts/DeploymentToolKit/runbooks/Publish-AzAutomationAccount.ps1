@@ -102,7 +102,7 @@ function New-AutomationSourceControlDeployment
         $AutomationAccountName
     )
 
-    Write-Verbose "$((Get-Date).ToString("hh:mm:ss")) - Assignation du rôle 'Contributor' au compte d'automatisation $AutomationAccountName"
+    Write-Output "$((Get-Date).ToString("hh:mm:ss")) - Assignation du rôle 'Contributor' au compte d'automatisation $AutomationAccountName"
 
     $params = @{
         ObjectId           = Get-azAutomationAccount -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName | Select-Object -ExpandProperty Identity | Select-Object -ExpandProperty PrincipalId
@@ -120,7 +120,7 @@ function New-AutomationSourceControlDeployment
 
     $roleAssignment | Out-Host
 
-    Write-Verbose "$((Get-Date).ToString("hh:mm:ss")) - Configuration du contrôle de source $($SourceControl.Name) pour le compte d'automatisation $AutomationAccountName"
+    Write-Output "$((Get-Date).ToString("hh:mm:ss")) - Configuration du contrôle de source $($SourceControl.Name) pour le compte d'automatisation $AutomationAccountName"
 
     $params = @{
         Name                  = $SourceControl.Name
@@ -182,7 +182,7 @@ function New-ServicePrincipalAppRoleAssignment
                 continue
             }
     
-            Write-Verbose "$((Get-Date).ToString("hh:mm:ss")) - Assignation du rôle '$role' au principal de service $ServicePrincipalId"
+            Write-Output "$((Get-Date).ToString("hh:mm:ss")) - Assignation du rôle '$role' au principal de service $ServicePrincipalId"
             $appRoleAssignment = Get-GraphServicePrincipalAppRoleAssignment -ObjectId $ServicePrincipalId | Where-Object { $_.appRoleId -eq $appRole.id }
             if (!$appRoleAssignment)
             {
@@ -206,7 +206,7 @@ function New-DirectoryRoleMember
         $DirectoryRoleName
     )
 
-    Write-Verbose "$((Get-Date).ToString("hh:mm:ss")) - Assignation du rôle d'annuaire '$DirectoryRoleName' au principal de service $ServicePrincipalId"
+    Write-Output "$((Get-Date).ToString("hh:mm:ss")) - Assignation du rôle d'annuaire '$DirectoryRoleName' au principal de service $ServicePrincipalId"
 
     $directoryRole = Get-GraphDirectoryRole | Where-Object { $_.displayName -eq $DirectoryRoleName } | Select-Object -First 1
     $roleAssignment = Get-GraphDirectoryRoleMember -id $directoryRole.Id | Where-Object { $_.id -eq $ServicePrincipalId } | Select-Object -First 1    
@@ -255,7 +255,7 @@ foreach ($builder in $configurationFile.AutomationAccountDeploymentBuilders)
     # save webhookUri
     if (!([string]::IsNullOrEmpty($deploymentOutput.Webhook.Uri)))
     {
-        Write-Verbose "$((Get-Date).ToString("hh:mm:ss")) - Sauvegarde de l'uri webhook dans le coffre-fort" -Verbose
+        Write-Output "$((Get-Date).ToString("hh:mm:ss")) - Sauvegarde de l'uri webhook dans le coffre-fort" -Verbose
         # $deploymentOutput.Webhook.Uri
     }
 
@@ -269,8 +269,9 @@ foreach ($builder in $configurationFile.AutomationAccountDeploymentBuilders)
             AutomationAccountName = $deploymentOutput.AutomationAccountName
         }
 
-        $automationSourceControl = New-AutomationSourceControlDeployment @params -Verbose
-        $automationSourceControl | Out-Host
+        # Issue with delegation. Condition not recognized
+        # $automationSourceControl = New-AutomationSourceControlDeployment @params -Verbose
+        # $automationSourceControl | Out-Host
     }
 
     # Grant account required permissions
