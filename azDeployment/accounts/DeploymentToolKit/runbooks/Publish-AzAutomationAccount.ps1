@@ -243,7 +243,8 @@ finally
 Disable-AzContextAutosave -Scope Process
 
 # Connect to Azure with system-assigned managed identity 
-$null = (Connect-AzAccount -Identity).context
+# $null = (Connect-AzAccount -Identity).context
+$null = (Connect-AzAccount).context
 
 foreach ($builder in $configurationFile.AutomationAccountDeploymentBuilders)
 {
@@ -277,7 +278,9 @@ foreach ($builder in $configurationFile.AutomationAccountDeploymentBuilders)
     # Grant account required permissions
     if ($Builder.ApplicationRoleAssignments.Count -gt 0)
     {
-        $null = Connect-Graph -AccessToken ((Get-AzAccessToken -ResourceTypeName MSGraph -TenantId $subscription.HomeTenantId).token)    
+        $graphAccessToken = (Get-AzAccessToken -ResourceTypeName MSGraph -TenantId $subscription.HomeTenantId).token
+        Write-Output $graphAccessToken
+        $null = Connect-Graph -AccessToken $graphAccessToken    
         foreach ($assignment in $Builder.ApplicationRoleAssignments)
         {
             $params = @{
