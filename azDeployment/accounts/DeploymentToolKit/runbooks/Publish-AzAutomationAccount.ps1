@@ -270,7 +270,7 @@ finally
 Disable-AzContextAutosave -Scope Process
 
 # Connect to Azure with system-assigned managed identity 
-$null = (Connect-AzAccount -Identity -AccountId "de5f1413-8a5c-472f-848c-3f0c60bd8eeb").context
+$null = (Connect-AzAccount -Identity -AccountId "19c3b4b2-26c3-4eca-bfc5-ecb7d5011b2d").context
 
 foreach ($builder in $configurationFile.AutomationAccountDeploymentBuilders)
 {
