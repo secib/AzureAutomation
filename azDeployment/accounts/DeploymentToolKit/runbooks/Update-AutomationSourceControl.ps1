@@ -12,8 +12,8 @@ if (-Not $WebhookData.RequestBody)
 if ($WebHookData)
 {
     # Header message passed as a hashtable 
-    Write-Output "The Webhook Header Message"
-    Write-Output $WebHookData.RequestHeader.Message
+    Write-Output "The Webhook Header"
+    Write-Output $WebHookData.RequestHeader
 
     # This is the name of the webhook when configured in Azure Automation
     Write-Output 'The Webhook Name'
