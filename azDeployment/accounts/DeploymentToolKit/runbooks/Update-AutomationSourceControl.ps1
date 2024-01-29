@@ -92,8 +92,12 @@ if ($null -ne $WebHookData)
     Write-Output 'X-Hub-Signature-256'
     Write-Output $WebHookData.RequestHeader.'X-Hub-Signature-256'
 
+    # Get Secret key from keyvault
+    $secret = Get-AzKeyVaultSecret -VaultName AzDeploymentToolkit -Name WebhookPayloadValidationToken -ErrorAction Stop
+
+    # Get HMAC hash from the request body and secret
     Write-Output 'HMAC Hash'
-    $hash = Get-HMACHash -Format HEX -Algorithm SHA256 -Message $WebHookData.RequestBody -Secret 'secret'
+    $hash = Get-HMACHash -Format HEX -Algorithm SHA256 -Message $WebHookData.RequestBody -Secret $secret
     Write-Output "sha256=$hash"
 
     if ($WebHookData.RequestHeader.'X-Hub-Signature-256' -notlike "sha256=$hash")
@@ -109,4 +113,3 @@ else
 {
     Write-Error "Runbook mean to be started only from webhook." 
 }
-
