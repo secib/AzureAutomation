@@ -112,7 +112,17 @@ if ($null -ne $WebHookData)
     }
     else
     {
-        Write-Output "Do job"
+        $gitObject = $WebHookData.RequestBody | ConvertFrom-Json
+
+        foreach ($modified in $gitObject.commits.modified)
+        {
+            $scriptContent = Get-GitHubContent -Path $modified -OwnerName $gitObject.repository.owner.name -RepositoryName $gitObject.repository.name -ResultAsString
+            $params = @{
+                "ScriptContent" = $scriptContent
+                "ScriptPath"    = $modified 
+            }
+            Start-AzAutomationRunbook -AutomationAccountName "DeploymentToolKit" -Name "Update-Runbook" -ResourceGroupName "AzDeployment" -Parameters $params
+        }
     }
 }
 else
