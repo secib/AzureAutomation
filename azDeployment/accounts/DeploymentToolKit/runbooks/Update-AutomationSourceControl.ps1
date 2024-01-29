@@ -26,8 +26,8 @@ if ($null -ne $WebHookData)
     Write-Output 'The Request Body'
     Write-Output $WebHookData.RequestBody
 
-    $WebHookData.RequestHeader | gm
-    Write-Output $WebHookData.RequestHeader["X-Hub-Signature-256"]
+    Write-Output 'X-Hub-Signature-256'
+    Write-Output $WebHookData.RequestHeader.'X-Hub-Signature-256'
 }
 else
 {
