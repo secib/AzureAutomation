@@ -1,8 +1,7 @@
-workflow Update-Runbook
+workflow UpdateRunbook-Workflow
 {
     param (
         [Parameter(Mandatory)]
-        [ValidateNotNullOrEmpty()]
         [object]$GitHubContent
     )
     
@@ -14,7 +13,7 @@ workflow Update-Runbook
     
     $gitObject = $GitHubContent | ConvertFrom-Json    
     $runbookName = $gitObject.Name.TrimEnd(".ps1")
-    $gitObject.ContentAsString | Set-Content -Path $gitObject.Name -Encoding UTF8
+    $gitObject.ContentAsString | Set-Content -Path $gitObject.Name -Encoding UTF8 -ErrorAction Stop
 
     Write-Output $gitObject
 
