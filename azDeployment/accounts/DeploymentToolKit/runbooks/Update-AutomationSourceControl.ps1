@@ -1,28 +1,16 @@
 [CmdletBinding()]
 param (
-    [Parameter()]
-    [string]
-    $SubscriptionName,
-
-    [Parameter()]
-    [string]
-    $ResourceGroupName,
-
-    [Parameter()]
-    [string]
-    $AutomationAccountName,
-    
-    [Parameter()]
-    [string]
-    $SourceControlName,
-
-    [Parameter()]
-    [string]
-    $AccessToken
+    [Parameter(Mandatory)]
+    [object]
+    $WebhookData
 )
 
-$null = Set-AzContext -Subscription $SubscriptionName -ErrorAction Stop
+# Logic to allow for testing in Test pane
+if (-Not $WebhookData.RequestBody)
+{ 
+    $WebhookData = $WebhookData | ConvertFrom-Json
+}
 
-$secureAccessToken = ConvertTo-SecureString -String $AccessToken -AsPlainText -Force
-Get-AzAutomationSourceControl -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name $SourceControlName | Update-AzAutomationSourceControl -AccessToken $secureAccessToken
-#
+$gitObject = $WebhookData.RequestBody | ConvertFrom-Json
+
+Write-Output $gitObject
