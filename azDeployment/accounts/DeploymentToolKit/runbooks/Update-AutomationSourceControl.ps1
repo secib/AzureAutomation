@@ -1,16 +1,19 @@
 param (
-    [Parameter (Mandatory = $true)]
+    [Parameter (Mandatory = $false)]
     [object]$WebHookData
 )
 
-# Logic to allow for testing in Test pane
-if (-Not $WebhookData.RequestBody)
-{ 
-    $WebhookData = $WebhookData | ConvertFrom-Json
-}
 
-if ($WebHookData)
+
+# If runbook was called from Webhook, WebhookData will not be null.
+if ($null -ne $WebHookData)
 {
+    # Logic to allow for testing in Test pane
+    if (-Not $WebhookData.RequestBody)
+    { 
+        $WebhookData = $WebhookData | ConvertFrom-Json
+    }
+
     # Header message passed as a hashtable 
     Write-Output "The Webhook Header"
     Write-Output $WebHookData.RequestHeader
@@ -22,8 +25,12 @@ if ($WebHookData)
     # Body of the message.
     Write-Output 'The Request Body'
     Write-Output $WebHookData.RequestBody
+
+    $WebHookData.RequestHeader | gm
+    Write-Output $WebHookData.RequestHeader["X-Hub-Signature-256"]
 }
 else
 {
-    Write-Output 'No data received'
+    Write-Error "Runbook mean to be started only from webhook." 
 }
+
