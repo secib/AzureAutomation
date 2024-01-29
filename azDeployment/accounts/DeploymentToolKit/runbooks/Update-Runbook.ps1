@@ -3,7 +3,7 @@ workflow Update-Runbook
     param (
         [Parameter(Mandatory)]
         [ValidateNotNullOrEmpty()]
-        [string]$GitHubContent
+        [object]$GitHubContent
     )
     
     # Ensures you do not inherit an AzContext in your runbook
