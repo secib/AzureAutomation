@@ -336,5 +336,3 @@ foreach ($builder in $configurationFile.AutomationAccountDeploymentBuilders)
         }
     }    
 }
-
-#
