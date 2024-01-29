@@ -92,6 +92,12 @@ if ($null -ne $WebHookData)
     Write-Output 'X-Hub-Signature-256'
     Write-Output $WebHookData.RequestHeader.'X-Hub-Signature-256'
 
+    # Ensures you do not inherit an AzContext in your runbook
+    Disable-AzContextAutosave -Scope Process
+
+    # Connect to Azure with system-assigned managed identity 
+    $null = (Connect-AzAccount -Identity).context
+
     # Get Secret key from keyvault
     $secret = Get-AzKeyVaultSecret -VaultName AzDeploymentToolkit -Name WebhookPayloadValidationToken -ErrorAction Stop
 
