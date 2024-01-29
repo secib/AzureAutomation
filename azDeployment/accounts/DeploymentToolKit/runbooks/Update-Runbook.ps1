@@ -3,11 +3,7 @@ workflow Update-Runbook
     param (
         [Parameter(Mandatory)]
         [ValidateNotNullOrEmpty()]
-        [string]$ScriptContent,
-    
-        [Parameter(Mandatory)]
-        [ValidateNotNullOrEmpty()]
-        [string]$ScriptPath
+        [string]$GitHubContent
     )
     
     # Ensures you do not inherit an AzContext in your runbook
@@ -16,15 +12,15 @@ workflow Update-Runbook
     # Connect to Azure with system-assigned managed identity 
     $null = (Connect-AzAccount -Identity).context    
     
-    $scriptfile = $ScriptPath.Split("/")[-1]
-    $runbookName = $scriptfile.TrimEnd(".ps1")
-    $ScriptContent | Set-Content -Path $scriptfile -Encoding UTF8
+    $gitObject = $GitHubContent | ConvertFrom-Json
+    $runbookName = $gitObject.Name.TrimEnd(".ps1")
+    $ScriptContent | Set-Content -Path $gitObject.ContentAsString -Encoding UTF8
 
     $subscriptions = Get-AzSubscription | Where-Object { $_.ExtendedProperties.ManagedByTenants }
 
     foreach -Parallel ($subscription in $subscriptions)
     {
         $azContext = Set-AzContext -Subscription $subscription.Id -ErrorAction Stop
-        Import-AzAutomationRunbook -Path $scriptfile -Name $runbookName -Type PowerShell -AutomationAccountName "DeploymentToolKit" -ResourceGroupName "AzDeployment" -Force -Published
+        Import-AzAutomationRunbook -Path $gitObject.Name -Name $runbookName -Type PowerShell -AutomationAccountName "DeploymentToolKit" -ResourceGroupName "AzDeployment" -Force -Published
     }    
 }
