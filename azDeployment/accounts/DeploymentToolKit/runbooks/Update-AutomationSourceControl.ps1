@@ -99,7 +99,7 @@ if ($null -ne $WebHookData)
     $null = (Connect-AzAccount -Identity).context
 
     # Get Secret key from keyvault
-    $secret = Get-AzKeyVaultSecret -VaultName AzDeploymentToolkit -Name WebhookPayloadValidationToken -ErrorAction Stop
+    $secret = Get-AzKeyVaultSecret -VaultName AzDeploymentToolkit -Name WebhookPayloadValidationToken -AsPlainText -ErrorAction Stop
 
     # Get HMAC hash from the request body and secret
     Write-Output 'HMAC Hash'
