@@ -93,7 +93,7 @@ if ($null -ne $WebHookData)
     Write-Output $WebHookData.RequestHeader.'X-Hub-Signature-256'
 
     # Ensures you do not inherit an AzContext in your runbook
-    Disable-AzContextAutosave -Scope Process
+    $null = Disable-AzContextAutosave -Scope Process
 
     # Connect to Azure with system-assigned managed identity 
     $null = (Connect-AzAccount -Identity).context
@@ -102,8 +102,8 @@ if ($null -ne $WebHookData)
     $secret = Get-AzKeyVaultSecret -VaultName AzDeploymentToolkit -Name WebhookPayloadValidationToken -AsPlainText -ErrorAction Stop
 
     # Get HMAC hash from the request body and secret
-    Write-Output 'HMAC Hash'
     $hash = Get-HMACHash -Format HEX -Algorithm SHA256 -Message $WebHookData.RequestBody -Secret $secret
+    Write-Output 'HMAC Hash'
     Write-Output "sha256=$hash"
 
     if ($WebHookData.RequestHeader.'X-Hub-Signature-256' -notlike "sha256=$hash")
