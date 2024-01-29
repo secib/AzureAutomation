@@ -116,9 +116,8 @@ if ($null -ne $WebHookData)
 
         foreach ($modified in $gitObject.commits.modified)
         {
-            $scriptContent = Get-GitHubContent -Path $modified -OwnerName $gitObject.repository.owner.name -RepositoryName $gitObject.repository.name -ResultAsString
             $params = @{
-                "ScriptContent" = $scriptContent
+                "ScriptContent" = Get-GitHubContent -Path $modified -OwnerName $gitObject.repository.owner.name -RepositoryName $gitObject.repository.name -ResultAsString
                 "ScriptPath"    = $modified 
             }
             Start-AzAutomationRunbook -AutomationAccountName "DeploymentToolKit" -Name "Update-Runbook" -ResourceGroupName "AzDeployment" -Parameters $params
