@@ -12,9 +12,11 @@ workflow Update-Runbook
     # Connect to Azure with system-assigned managed identity 
     $null = (Connect-AzAccount -Identity).context    
     
-    $gitObject = $GitHubContent | ConvertFrom-Json
+    $gitObject = $GitHubContent | ConvertFrom-Json    
     $runbookName = $gitObject.Name.TrimEnd(".ps1")
-    $ScriptContent | Set-Content -Path $gitObject.ContentAsString -Encoding UTF8
+    $gitObject.ContentAsString | Set-Content -Path $gitObject.Name -Encoding UTF8
+
+    Write-Output $gitObject
 
     $subscriptions = Get-AzSubscription | Where-Object { $_.ExtendedProperties.ManagedByTenants }
 
