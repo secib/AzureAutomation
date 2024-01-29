@@ -3,7 +3,68 @@ param (
     [object]$WebHookData
 )
 
+function Get-HMACHash
+{
+    [CmdletBinding()]
+    param (
+        # Message to geneate a HMAC hash for
+        [Parameter(Mandatory = $true,
+            Position = 0,
+            ParameterSetName = "Default",
+            ValueFromPipelineByPropertyName = $true)]
+        [ValidateNotNullOrEmpty()]
+        [String]
+        $Message,
+        # Secret Key
+        [Parameter(Mandatory = $true,
+            Position = 1,
+            ParameterSetName = "Default",
+            ValueFromPipelineByPropertyName = $true)]
+        [ValidateNotNullOrEmpty()]
+        [Alias("Key")]
+        [String]
+        $Secret,
+        # Algorithm
+        [Parameter(Mandatory = $false,
+            Position = 2,
+            ParameterSetName = "Default",
+            ValueFromPipelineByPropertyName = $true)]
+        [ValidateSet("MD5", "SHA1", "SHA256", "SHA384", "SHA512")]
+        [Alias("alg")]
+        [String]
+        $Algorithm = "SHA256",
+        # Output Format
+        [Parameter(Mandatory = $false,
+            Position = 2,
+            ParameterSetName = "Default",
+            ValueFromPipelineByPropertyName = $true)]
+        [ValidateSet("Base64", "HEX", "hexlower")]
+        [String]
+        $Format = "Base64"
+    )
 
+
+    $hmac = switch ($Algorithm)
+    {
+        "MD5" { New-Object System.Security.Cryptography.HMACMD5; break }
+        "SHA1" { New-Object System.Security.Cryptography.HMACSHA1; break }
+        "SHA256" { New-Object System.Security.Cryptography.HMACSHA256; break }
+        "SHA384" { New-Object System.Security.Cryptography.HMACSHA384; break }
+        "SHA512" { New-Object System.Security.Cryptography.HMACSHA512; break }
+    }
+
+    $hmac.key = [Text.Encoding]::UTF8.GetBytes($secret)
+    $signature = $hmac.ComputeHash([Text.Encoding]::UTF8.GetBytes($message))
+
+    $signature = switch ($Format)
+    {
+        "HEX" { ($signature | ForEach-Object ToString X2 ) -join '' }
+        "hexlower" { ($signature | ForEach-Object ToString x2 ) -join '' }
+        Default { [Convert]::ToBase64String($signature) }
+    }
+   
+    return ($signature)
+}
 
 # If runbook was called from Webhook, WebhookData will not be null.
 if ($null -ne $WebHookData)
@@ -26,8 +87,23 @@ if ($null -ne $WebHookData)
     Write-Output 'The Request Body'
     Write-Output $WebHookData.RequestBody
 
+    # Validating webhook deliveries
+    # The hash signature always starts with sha256=
     Write-Output 'X-Hub-Signature-256'
     Write-Output $WebHookData.RequestHeader.'X-Hub-Signature-256'
+
+    Write-Output 'HMAC Hash'
+    $hash = Get-HMACHash -Format HEX -Algorithm SHA256 -Message $WebHookData.RequestBody -Secret 'secret'
+    Write-Output "sha256=$hash"
+
+    if ($WebHookData.RequestHeader.'X-Hub-Signature-256' -notlike "sha256=$hash")
+    {
+        Write-Error "The webhook payload validation failed"  
+    }
+    else
+    {
+        Write-Output "Do job"
+    }
 }
 else
 {
