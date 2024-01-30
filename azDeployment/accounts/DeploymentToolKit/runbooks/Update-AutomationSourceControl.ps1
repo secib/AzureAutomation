@@ -1,6 +1,15 @@
 param (
     [Parameter (Mandatory = $false)]
-    [object]$WebHookData
+    [object]$WebHookData,
+
+    [Parameter (Mandatory = $false)]
+    [string]$ResourceGroupName = "Automation",
+
+    [Parameter (Mandatory = $false)]
+    [string]$VaultName = "AzDeploymentToolkit",
+
+    [Parameter (Mandatory = $false)]
+    [string]$SecretName = "WebhookPayloadValidationToken"
 )
 
 function Get-HMACHash
@@ -112,7 +121,7 @@ if ($null -ne $WebHookData)
     $null = (Connect-AzAccount -Identity).context
 
     # Get webhook payload validation secret from keyvault
-    $secret = Get-AzKeyVaultSecret -VaultName AzDeploymentToolkit -Name WebhookPayloadValidationToken -AsPlainText -ErrorAction Stop
+    $secret = Get-AzKeyVaultSecret -VaultName $VaultName -Name $SecretName -AsPlainText -ErrorAction Stop
 
     # Get HMAC hash from the request body and secret
     $hash = Get-HMACHash -Format HEX -Algorithm SHA256 -Message $WebHookData.RequestBody -Secret $secret
@@ -137,7 +146,7 @@ if ($null -ne $WebHookData)
             $null = Set-AzContext -Subscription $subscription.Id -ErrorAction Stop
             foreach ($path in $folderPath)
             {
-                Get-AzAutomationAccount | Get-AzAutomationSourceControl | Where-Object { $_.FolderPath -match $path } | Start-AzAutomationSourceControlSyncJob            
+                Get-AzAutomationAccount -ResourceGroupName $ResourceGroupName | Get-AzAutomationSourceControl | Where-Object { $_.FolderPath -match $path } | Start-AzAutomationSourceControlSyncJob            
             }
         }
     }
