@@ -58,4 +58,4 @@ if (!(Get-AdminAuditLogConfig).UnifiedAuditLogIngestionEnabled)
 Write-Output UnifiedAuditLogIngestionEnabled
 (Get-AdminAuditLogConfig).UnifiedAuditLogIngestionEnabled
 
-# tata content toto titi toto enfin!!!! bref... sa mère....
+# tata content toto titi toto enfin!!!!
