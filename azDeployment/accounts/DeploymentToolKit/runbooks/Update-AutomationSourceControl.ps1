@@ -125,13 +125,15 @@ if ($null -ne $WebHookData)
     }
     else
     {
+        Write-Output "The webhook payload validation succeed"
         $folderPath = Get-FolderPathFromGitPushEvent -Body $WebHookData.RequestBody
 
         [array]$managedSubscriptions = Get-AzSubscription | Where-Object { $_.State -eq "Enabled" -and $_.ManagedByTenantIds }
+        Write-Output "Found $($managedSubscriptions.Count) managed suscriptions"
 
         foreach ($subscription in $managedSubscriptions)
         {
-            Write-Output "TenantId $HomeTenantId - Subscription $subscription.Id"
+            Write-Output "TenantId $($subscription.HomeTenantId) - Subscription $($subscription.Id)"
             $null = Set-AzContext -Subscription $subscription.Id -ErrorAction Stop
             foreach ($path in $folderPath)
             {
