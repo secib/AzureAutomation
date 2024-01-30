@@ -11,17 +11,14 @@ workflow UpdateRunbook-Workflow
     # Connect to Azure with system-assigned managed identity 
     $null = (Connect-AzAccount -Identity).context    
     
-    $gitObject = $GitHubContent | ConvertFrom-Json    
-    $runbookName = $gitObject.Name.TrimEnd(".ps1")
-    $gitObject.ContentAsString | Set-Content -Path $gitObject.Name -Encoding UTF8 -ErrorAction Stop
-
-    Write-Output $gitObject
+    $gitObject = $GitHubContent | ConvertFrom-Json
+    $folderPath = $gitObject.Path.Substring(0, $gitObject.Path.lastIndexOf('/'))
 
     $subscriptions = Get-AzSubscription | Where-Object { $_.ExtendedProperties.ManagedByTenants }
 
     foreach -Parallel ($subscription in $subscriptions)
     {
         $azContext = Set-AzContext -Subscription $subscription.Id -ErrorAction Stop
-        Import-AzAutomationRunbook -Path $gitObject.Name -Name $runbookName -Type PowerShell -AutomationAccountName "DeploymentToolKit" -ResourceGroupName "AzDeployment" -Force -Published
+        Get-AzAutomationAccount | Get-AzAutomationSourceControl | Where-Object { $_.FolderPath -match $folderPath }
     }    
 }
