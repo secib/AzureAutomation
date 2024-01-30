@@ -1,4 +1,4 @@
-workflow Update-RunbookWorkflow
+workflow Update-Runbook
 {
     [CmdletBinding()]
     param (
