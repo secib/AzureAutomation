@@ -5,11 +5,9 @@ workflow Update-Runbook
         [object]$GitHubContent
     )
     
-    $gitObject = $GitHubContent | ConvertFrom-Json
+    Write-Output $GitHubContent
 
-    Write-Output $gitObject
-
-    $folderPath = $gitObject.Path.Substring(0, $gitObject.Path.lastIndexOf('/'))
+    $folderPath = $GitHubContent.Path.Substring(0, $GitHubContent.Path.lastIndexOf('/'))
 
     Write-Output $folderPath
 
