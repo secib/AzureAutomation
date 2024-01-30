@@ -66,6 +66,19 @@ function Get-HMACHash
     return ($signature)
 }
 
+function Get-FolderPathFromGitPushEvent
+{
+    [CmdletBinding()]
+    param (
+        [Parameter()]
+        [string]
+        $Body
+    )
+
+    $object = $Body | ConvertFrom-Json
+    return , ($object.commits.modified | ForEach-Object { $_.Substring(0, $_.lastIndexOf('/')) } | Sort-Object -Unique)
+}
+
 # If runbook was called from Webhook, WebhookData will not be null.
 if ($null -ne $WebHookData)
 {
@@ -98,7 +111,7 @@ if ($null -ne $WebHookData)
     # Connect to Azure with system-assigned managed identity 
     $null = (Connect-AzAccount -Identity).context
 
-    # Get Secret key from keyvault
+    # Get webhook payload validation secret from keyvault
     $secret = Get-AzKeyVaultSecret -VaultName AzDeploymentToolkit -Name WebhookPayloadValidationToken -AsPlainText -ErrorAction Stop
 
     # Get HMAC hash from the request body and secret
@@ -106,20 +119,24 @@ if ($null -ne $WebHookData)
     Write-Output 'HMAC Hash'
     Write-Output "sha256=$hash"
 
-    if ($WebHookData.RequestHeader.'X-Hub-Signature-256' -notlike "sha256=$hash")
+    if ($WebHookData.RequestHeader.'X-Hub-Signature-256' -ne "sha256=$hash")
     {
         Write-Error "The webhook payload validation failed"  
     }
     else
     {
-        $gitObject = $WebHookData.RequestBody | ConvertFrom-Json
+        $folderPath = Get-FolderPathFromGitPushEvent -Body $WebHookData.RequestBody
 
-        foreach ($modified in $gitObject.commits.modified)
+        [array]$managedSubscriptions = Get-AzSubscription | Where-Object { $_.State -eq "Enabled" -and $_.ManagedByTenantIds }
+
+        foreach ($subscription in $managedSubscriptions)
         {
-            $params = @{
-                "GitHubContent" = Get-GitHubContent -Path $modified -OwnerName $gitObject.repository.owner.name -RepositoryName $gitObject.repository.name -ResultAsString
+            Write-Output "TenantId $HomeTenantId - Subscription $subscription.Id"
+            $null = Set-AzContext -Subscription $subscription.Id -ErrorAction Stop
+            foreach ($path in $folderPath)
+            {
+                Get-AzAutomationAccount | Get-AzAutomationSourceControl | Where-Object { $_.FolderPath -match $path } | Start-AzAutomationSourceControlSyncJob            
             }
-            Start-AzAutomationRunbook -AutomationAccountName "DeploymentToolKit" -Name "Update-Runbook" -ResourceGroupName "AzDeployment" -Parameters $params
         }
     }
 }
