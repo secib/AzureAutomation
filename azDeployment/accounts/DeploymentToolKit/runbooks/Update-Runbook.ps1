@@ -17,7 +17,7 @@ workflow Update-Runbook
     # Connect to Azure with system-assigned managed identity 
     $null = (Connect-AzAccount -Identity).context    
 
-    [array]$subscriptions = Get-AzSubscription | Where-Object { $_.ExtendedProperties.ManagedByTenant }
+    [array]$subscriptions = Get-AzSubscription | Where-Object { $_.ExtendedProperties.ManagedByTenants }
 
     foreach -Parallel ($subscription in $subscriptions)
     {
