@@ -57,6 +57,3 @@ if (!(Get-AdminAuditLogConfig).UnifiedAuditLogIngestionEnabled)
 
 Write-Output UnifiedAuditLogIngestionEnabled
 (Get-AdminAuditLogConfig).UnifiedAuditLogIngestionEnabled
-
-# tata content toto titi toto enfin!!!! oh! oh! oh! ah!
-# tata content toto titi toto enfin!!!! oh! oh! oh! ah!
