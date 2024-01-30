@@ -1,4 +1,4 @@
-workflow UpdateRunbook-Workflow
+workflow UpdateRunbookWorkflow
 {
     param (
         [Parameter(Mandatory)]
