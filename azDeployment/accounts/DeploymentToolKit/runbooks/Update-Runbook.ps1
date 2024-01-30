@@ -21,7 +21,8 @@ workflow Update-Runbook
 
     foreach -Parallel ($subscription in $subscriptions)
     {
+        Write-Output $subscription.Id
         $azContext = Set-AzContext -Subscription $subscription.Id -ErrorAction Stop
-        Get-AzAutomationAccount | Get-AzAutomationSourceControl | Where-Object { $_.FolderPath -match $folderPath }
+        Get-AzAutomationAccount | Get-AzAutomationSourceControl | Where-Object { $_.FolderPath -match $folderPath } | Start-AzAutomationSourceControlSyncJob
     }    
 }
