@@ -1,8 +1,9 @@
 workflow Update-RunbookWorkflow
 {
+    [CmdletBinding()]
     param (
         [Parameter(Mandatory)]
-        [string]$GitHubContent
+        [object]$GitHubContent
     )
     
     # Ensures you do not inherit an AzContext in your runbook
