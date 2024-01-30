@@ -21,7 +21,10 @@ $secret = Get-AzKeyVaultSecret -VaultName $VaultName -Name $SecretName -ErrorAct
 # Check if secret has been updated in last 24h meaning this runbook should run at least one time a day.
 if (((Get-Date).ToUniversalTime() - $secret.Updated.ToUniversalTime()) -lt (New-TimeSpan -Days 1))
 {
-    [array]$managedSubscriptions = Get-AzSubscription | Where-Object { $_.State -eq "Enabled" }
+    Write-Output "Github personal token was updated last 24h"
+    Write-Output $secret
+    
+    [array]$managedSubscriptions = Get-AzSubscription | Where-Object { $_.State -eq "Enabled" -and $_.ManagedByTenantIds }
     Write-Output "Found $($managedSubscriptions.Count) managed suscriptions"
 
     foreach ($subscription in $managedSubscriptions)
