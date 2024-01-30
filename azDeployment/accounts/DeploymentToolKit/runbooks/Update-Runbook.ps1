@@ -1,6 +1,5 @@
 workflow Update-Runbook
 {
-    [CmdletBinding()]
     param (
         [Parameter(Mandatory)]
         [object]$GitHubContent
