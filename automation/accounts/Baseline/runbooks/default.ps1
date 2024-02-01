@@ -42,18 +42,80 @@ Import-Module ExchangeOnlineManagement
 
 Connect-ExchangeOnline -ManagedIdentity -Organization $requestBody.Organization
 
-if ((Get-OrganizationConfig).IsDehydrated)
+class Task
 {
-    Enable-OrganizationCustomization
+    [string]$Name
+
+    Task([string]$name)
+    {
+        $this.Name = $name
+    }
+
+    [bool] IsCompliant()
+    {
+        throw("Must Override Method")
+    }
+
+    [void] MakeCompliant()
+    {
+        throw("Must Override Method")
+    }
+
+    [void] Run()
+    {
+        Write-Output "Running task $($this.Name)"
+        $isCompliant = $this.IsCompliant()
+
+        If (-not $isCompliant)
+        {
+            $this.MakeCompliant()
+            $isCompliant = $this.IsCompliant()
+        }
+
+        Write-Output "$($this.Name) is compliant: $isCompliant)"
+    }
 }
 
-Write-Output IsDehydrated
-(Get-OrganizationConfig).IsDehydrated
-
-if (!(Get-AdminAuditLogConfig).UnifiedAuditLogIngestionEnabled)
+class EnableOrganizationCustomizationTask : Task
 {
-    Set-AdminAuditLogConfig -UnifiedAuditLogIngestionEnabled:$true
+    EnableOrganizationCustomizationTask([string]$name) : base ("EnableOrganizationCustomization")
+    {
+    }
+
+    [bool]IsCompliant()
+    {
+        return -not ((Get-OrganizationConfig).IsDehydrated)
+    }
+
+    [void]Run()
+    {
+        Enable-OrganizationCustomization
+    }
 }
 
-Write-Output UnifiedAuditLogIngestionEnabled
-(Get-AdminAuditLogConfig).UnifiedAuditLogIngestionEnabled
+class UnifiedAuditLogIngestionEnabledTask : Task
+{
+    UnifiedAuditLogIngestionEnabledTask([string]$name) : base ("UnifiedAuditLogIngestionEnabled")
+    {
+    }
+
+    [bool]IsCompliant()
+    {
+        return ((Get-AdminAuditLogConfig).UnifiedAuditLogIngestionEnabled)
+    }
+
+    [void]Run()
+    {
+        Set-AdminAuditLogConfig -UnifiedAuditLogIngestionEnabled:$true
+    }
+}
+
+[Task[]]$taskList = @(
+    [EnableOrganizationCustomizationTask]::new(),
+    [UnifiedAuditLogIngestionEnabledTask]::new()
+)
+
+foreach ($task in $taskList)
+{
+    $task.Run()
+}
