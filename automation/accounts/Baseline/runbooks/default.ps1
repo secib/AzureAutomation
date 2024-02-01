@@ -78,7 +78,7 @@ class Task
 
 class EnableOrganizationCustomizationTask : Task
 {
-    EnableOrganizationCustomizationTask([string]$name) : base ("EnableOrganizationCustomization")
+    EnableOrganizationCustomizationTask() : base ("EnableOrganizationCustomization")
     {
     }
 
@@ -87,7 +87,7 @@ class EnableOrganizationCustomizationTask : Task
         return -not ((Get-OrganizationConfig).IsDehydrated)
     }
 
-    [void]Run()
+    [void]MakeCompliant()
     {
         Enable-OrganizationCustomization
     }
@@ -95,7 +95,7 @@ class EnableOrganizationCustomizationTask : Task
 
 class UnifiedAuditLogIngestionEnabledTask : Task
 {
-    UnifiedAuditLogIngestionEnabledTask([string]$name) : base ("UnifiedAuditLogIngestionEnabled")
+    UnifiedAuditLogIngestionEnabledTask() : base ("UnifiedAuditLogIngestionEnabled")
     {
     }
 
@@ -104,14 +104,14 @@ class UnifiedAuditLogIngestionEnabledTask : Task
         return ((Get-AdminAuditLogConfig).UnifiedAuditLogIngestionEnabled)
     }
 
-    [void]Run()
+    [void]MakeCompliant()
     {
         Set-AdminAuditLogConfig -UnifiedAuditLogIngestionEnabled:$true
     }
 }
 
 [Task[]]$taskList = @(
-    [EnableOrganizationCustomizationTask]::new(),
+    [EnableOrganizationCustomizationTask]::new()
     [UnifiedAuditLogIngestionEnabledTask]::new()
 )
 
