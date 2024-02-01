@@ -42,6 +42,12 @@ Import-Module ExchangeOnlineManagement
 
 Connect-ExchangeOnline -ManagedIdentity -Organization $requestBody.Organization
 
+class TaskResult
+{
+    [string]$TaskName
+    [bool]$IsCompliant
+}
+
 class Task
 {
     [string]$Name
@@ -61,9 +67,8 @@ class Task
         throw("Must Override Method")
     }
 
-    [void] Run()
+    [TaskResult] Run()
     {
-        Write-Output "Running task $($this.Name)"
         $isCompliant = $this.IsCompliant()
 
         If (-not $isCompliant)
@@ -72,7 +77,10 @@ class Task
             $isCompliant = $this.IsCompliant()
         }
 
-        Write-Output "$($this.Name) is compliant: $isCompliant)"
+        return [TaskResult]@{
+            TaskName    = $this.Name
+            IsCompliant = $isCompliant
+        }
     }
 }
 
@@ -115,7 +123,11 @@ class UnifiedAuditLogIngestionEnabledTask : Task
     [UnifiedAuditLogIngestionEnabledTask]::new()
 )
 
+$taskResultCollection = [System.Collections.ArrayList]::new()
+
 foreach ($task in $taskList)
 {
-    $task.Run()
+    $null = $taskResultCollection.Add($task.Run())
 }
+
+Write-Output $taskResultCollection
