@@ -1,12 +1,22 @@
+[CmdletBinding(DefaultParameterSetName = 'ConfigurationFile')]
+param (
+    [Parameter(ParameterSetName = 'Webhook', Mandatory)]
+    [object]
+    $WebhookData,
+
+    [Parameter(ParameterSetName = 'ConfigurationFile', Mandatory)]
+    [string]
+    $Path
+)
+
 class ConfigurationFile
 {
-    [string]$ApplicationId
     [AutomationAccountDeploymentBuilder[]]$AutomationAccountDeploymentBuilders
 }
 
 class AutomationAccountDeploymentBuilder
 {
-    [string]$SubscriptionName
+    [string]$SubscriptionId
     [ResourceGroupDeployment]$ResourceGroupDeployment
     [ApplicationRoleAssignment[]]$ApplicationRoleAssignments
     [string[]]$DirectoryRoles
@@ -25,23 +35,10 @@ class ApplicationRoleAssignment
     [string[]]$ApplicationRoles
 }
 
-class AutomationSourceControlDeploymentBuilder
-{
-    [string]$Name
-    [string]$RepoUrl
-    [string]$SourceType
-    [string]$Branch
-    [string]$FolderPath
-    [securestring]$AccessToken
-    [string]$ResourceGroupName
-    [string]$AutomationAccountName
-    [bool]$EnableAutoSync
-}
-
 class AutomationAccountDeploymentOutput
 {
     [SourceControlOuput]$SourceControl
-    [WebhookOutput]$Webhook
+    [WebhookOutput[]]$Webhook
     [string]$AutomationAccountName
 }
 
@@ -51,6 +48,7 @@ class SourceControlOuput
     [string]$RepositoryUrl
     [string]$Branch
     [string]$FolderPath
+    [string]$SourceType
 }
 
 class WebhookOutput
@@ -138,23 +136,11 @@ function New-AutomationSourceControlDeployment
 
     if ($null -eq $automationSourceControl)
     {
-        # $params = @{
-        #     Name                  = $SourceControl.Name
-        #     ResourceGroupName     = $ResourceGroupName
-        #     AutomationAccountName = $AutomationAccountName
-        #     SourceType            = "GitHub"
-        #     RepoUrl               = "https://github.com/{0}/{1}.git" -f $SourceControl.RepositoryAccountName, $SourceControl.RepositoryName
-        #     Branch                = $SourceControl.Branch
-        #     FolderPath            = $SourceControl.FolderPath
-        #     AccessToken           = Read-Host -AsSecureString -Prompt "PAT"
-        #     EnableAutoSync        = $true
-        # }
-
         $params = @{
             Name                  = $SourceControl.Name
             ResourceGroupName     = $ResourceGroupName
             AutomationAccountName = $AutomationAccountName
-            SourceType            = "VsoGit"
+            SourceType            = $SourceControl.SourceType
             RepoUrl               = $SourceControl.RepositoryUrl
             Branch                = $SourceControl.Branch
             FolderPath            = $SourceControl.FolderPath
@@ -242,15 +228,15 @@ function Start-AzAutomationDeployment
     [CmdletBinding()]
     param (
         [Parameter(Mandatory)]
-        [string]
-        $Path
+        [ConfigurationFile]
+        $ConfigurationFile
     )
 
-    [ConfigurationFile]$configurationFile = Get-Content -Encoding UTF8 -Raw -Path $Path | ConvertFrom-Json -ErrorAction Stop
+    $null = Connect-AzAccount -ErrorAction Stop -WarningAction SilentlyContinue
 
     foreach ($builder in $configurationFile.AutomationAccountDeploymentBuilders)
     {
-        $azContext = Set-AzContext -Subscription $builder.SubscriptionName -ErrorAction Stop
+        $azContext = Set-AzContext -Subscription $builder.SubscriptionId -ErrorAction Stop
         $deploymentOutput = New-ResourceGroupDeployment -Builder $builder.ResourceGroupDeployment -Verbose
         $deploymentOutput.Webhook | Out-Host
 
@@ -305,6 +291,38 @@ function Start-AzAutomationDeployment
     }
 }
 
-$null = Connect-AzAccount -ErrorAction Stop -WarningAction SilentlyContinue
 
-Start-AzAutomationDeployment -Path (Join-Path $PSScriptRoot "AzAutomationDeployment.parameters.json")
+switch ($PSCmdlet.ParameterSetName)
+{
+    "Webhook"
+    {
+        # Logic to allow for testing in Test pane
+        if (-Not $WebhookData.RequestBody)
+        { 
+            $WebhookData = $WebhookData | ConvertFrom-Json
+        }
+
+        try
+        {
+            [ConfigurationFile]$configurationFile = $WebhookData.RequestBody | ConvertFrom-Json -ErrorAction Stop
+        }
+        catch
+        {
+            Write-Error "Unexpected request body."
+            exit
+        }
+        finally
+        {
+            Write-Output $WebhookData.RequestBody
+        }
+
+        Start-AzAutomationDeployment -ConfigurationFile $configurationFile
+    }
+
+    "ConfigurationFile"
+    {
+        [ConfigurationFile]$configurationFile = Get-Content -Encoding UTF8 -Raw -Path $Path | ConvertFrom-Json -ErrorAction Stop
+
+        Start-AzAutomationDeployment -ConfigurationFile $configurationFile
+    }
+}

@@ -37,14 +37,43 @@ finally
     Write-Output $WebhookData.RequestBody
 }
 
-# Import the ExchangeOnlineManagement Module we imported into the Automation Account
-Import-Module ExchangeOnlineManagement
+class BaselineResult
+{
+    [string]$TenantId
+    [string]$Organization
+    [string]$StartDate
+    [string]$EndDate
+    [bool]$IsCompliant
+    [int]$CompliancyPercentage
+    [System.Collections.Generic.List[TaskResult]]$TaskResultCollection
+    [System.Collections.Generic.List[string]]$ErrorMessageCollection
+    [System.Collections.Generic.List[string]]$WarningMessageCollection
 
-Connect-ExchangeOnline -ManagedIdentity -Organization $requestBody.Organization
+    BaselineResult()
+    {
+        $this.StartDate = Get-Date -Format "dd-MM-yyyyTHH:mm:ssK"
+        $this.TaskResultCollection = [System.Collections.Generic.List[TaskResult]]::new()
+        $this.ErrorMessageCollection = [System.Collections.Generic.List[string]]::new()
+        $this.WarningMessageCollection = [System.Collections.Generic.List[string]]::new()
+    }
+
+    [void]Terminate()
+    {
+        $this.EndDate = Get-Date -Format "dd-MM-yyyyTHH:mm:ssK"
+
+        if ($this.TaskResultCollection.Count -ne 0)
+        {
+            $this.IsCompliant = $this.TaskResultCollection.IsCompliant -notcontains $false
+            $this.CompliancyPercentage = $this.TaskResultCollection.IsCompliant.Count / $this.TaskResultCollection.Count * 100
+        }
+    }
+}
 
 class TaskResult
 {
     [string]$TaskName
+    [string]$StartDate
+    [string]$EndDate
     [bool]$IsCompliant
 }
 
@@ -69,6 +98,11 @@ class Task
 
     [TaskResult] Run()
     {
+        $taskResult = [TaskResult]@{
+            TaskName  = $this.Name
+            StartDate = Get-Date -Format "dd-MM-yyyyTHH:mm:ssK"
+        }
+
         $isCompliant = $this.IsCompliant()
 
         If (-not $isCompliant)
@@ -77,10 +111,10 @@ class Task
             $isCompliant = $this.IsCompliant()
         }
 
-        return [TaskResult]@{
-            TaskName    = $this.Name
-            IsCompliant = $isCompliant
-        }
+        $taskResult.EndDate = Get-Date -Format "dd-MM-yyyyTHH:mm:ssK"
+        $taskResult.IsCompliant = $isCompliant
+
+        return $taskResult
     }
 }
 
@@ -118,16 +152,42 @@ class UnifiedAuditLogIngestionEnabledTask : Task
     }
 }
 
-[Task[]]$taskList = @(
-    [EnableOrganizationCustomizationTask]::new()
-    [UnifiedAuditLogIngestionEnabledTask]::new()
-)
+$BaselineResult = [BaselineResult]::new()
 
-$taskResultCollection = [System.Collections.ArrayList]::new()
+$taskList = [System.Collections.ArrayList]::new()
+
+# Import the ExchangeOnlineManagement Module we imported into the Automation Account
+Import-Module ExchangeOnlineManagement
+
+try
+{
+    Connect-ExchangeOnline -ManagedIdentity -Organization $requestBody.Organization -ErrorAction Stop
+}
+catch
+{
+    $BaselineResult.ErrorMessageCollection.Add($error[0].Exception.Message)
+}
+
+$connectionInformation = Get-ConnectionInformation
+
+if ($connectionInformation.State -eq "Connected")
+{
+    $BaselineResult.TenantId = $connectionInformation.TenantId
+    $BaselineResult.Organization = $connectionInformation.Organization
+    $null = $taskList.Add([EnableOrganizationCustomizationTask]::new())
+    $null = $taskList.Add([UnifiedAuditLogIngestionEnabledTask]::new())
+}
 
 foreach ($task in $taskList)
 {
-    $null = $taskResultCollection.Add($task.Run())
+    $null = $BaselineResult.TaskResultCollection.Add($task.Run())
 }
 
-Write-Output $taskResultCollection
+$BaselineResult.Terminate()
+
+if ($connectionInformation.State -eq "Connected")
+{
+    Disconnect-ExchangeOnline -Confirm:$false
+}
+
+Write-Output $BaselineResult

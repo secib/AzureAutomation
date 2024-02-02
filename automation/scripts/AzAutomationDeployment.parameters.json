@@ -26,6 +26,12 @@
             },
             "ApplicationRoleAssignments": [
                 {
+                    "ResourceAppId": "00000003-0000-0000-c000-000000000000",
+                    "ApplicationRoles": [
+                        "Directory.ReadWrite.All"
+                    ]
+                },
+                {
                     "ResourceAppId": "00000002-0000-0ff1-ce00-000000000000",
                     "ApplicationRoles": [
                         "Exchange.ManageAsApp"
@@ -33,7 +39,8 @@
                 }
             ],
             "DirectoryRoles": [
-                "Exchange Administrator"
+                "Exchange Administrator",
+                "Directory Writers"
             ]
         }
     ]
