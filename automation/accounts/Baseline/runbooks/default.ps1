@@ -5,19 +5,21 @@ param (
     $WebhookData
 )
 
+Import-Module ExchangeOnlineManagement
+
 class Body
 {
     [string]$Organization
 }
 
-# exit if no provided webhookdata
+# # exit if no provided webhookdata
 if ($null -eq $WebhookData)
 {
     Write-Error "No webhook data provided."
     exit
 }
 
-# Logic to allow for testing in Test pane
+# # Logic to allow for testing in Test pane
 if (-Not $WebhookData.RequestBody)
 { 
     $WebhookData = $WebhookData | ConvertFrom-Json
@@ -57,14 +59,14 @@ class BaselineResult
         $this.WarningMessageCollection = [System.Collections.Generic.List[string]]::new()
     }
 
-    [void]Terminate()
+    [void]Complete()
     {
         $this.EndDate = Get-Date -Format "dd-MM-yyyyTHH:mm:ssK"
 
         if ($this.TaskResultCollection.Count -ne 0)
         {
             $this.IsCompliant = $this.TaskResultCollection.IsCompliant -notcontains $false
-            $this.CompliancyPercentage = $this.TaskResultCollection.IsCompliant.Count / $this.TaskResultCollection.Count * 100
+            $this.CompliancyPercentage = ($this.TaskResultCollection | Where-Object { $_.IsCompliant }).Count / $this.TaskResultCollection.Count * 100
         }
     }
 }
@@ -75,6 +77,19 @@ class TaskResult
     [string]$StartDate
     [string]$EndDate
     [bool]$IsCompliant
+    [System.Collections.Generic.List[string]]$ErrorMessageCollection
+
+    TaskResult([string]$name)
+    {
+        $this.TaskName = $name
+        $this.StartDate = Get-Date -Format "dd-MM-yyyyTHH:mm:ssK"
+        $this.ErrorMessageCollection = [System.Collections.Generic.List[string]]::new()
+    }
+
+    [void] Complete()
+    {
+        $this.EndDate = Get-Date -Format "dd-MM-yyyyTHH:mm:ssK"
+    }
 }
 
 class Task
@@ -98,21 +113,39 @@ class Task
 
     [TaskResult] Run()
     {
-        $taskResult = [TaskResult]@{
-            TaskName  = $this.Name
-            StartDate = Get-Date -Format "dd-MM-yyyyTHH:mm:ssK"
-        }
+        $taskResult = [TaskResult]::new($this.Name)
 
-        $isCompliant = $this.IsCompliant()
-
-        If (-not $isCompliant)
+        try
         {
-            $this.MakeCompliant()
-            $isCompliant = $this.IsCompliant()
+            $taskResult.IsCompliant = $this.IsCompliant()
+        }
+        catch
+        {
+            $taskResult.ErrorMessageCollection.Add("IsCompliant failed with error {0}" -f $error[0].Exception.Message)
         }
 
-        $taskResult.EndDate = Get-Date -Format "dd-MM-yyyyTHH:mm:ssK"
-        $taskResult.IsCompliant = $isCompliant
+        if (-not $taskResult.IsCompliant)
+        {
+            try
+            {
+                $this.MakeCompliant()
+
+                try
+                {
+                    $taskResult.IsCompliant = $this.IsCompliant()
+                }
+                catch
+                {
+                    $taskResult.ErrorMessageCollection.Add("IsCompliant failed with error {0}" -f $error[0].Exception.Message)
+                }    
+            }
+            catch
+            {
+                $taskResult.ErrorMessageCollection.Add("MakeCompliant failed with error {0}" -f $error[0].Exception.Message)
+            }    
+        }
+
+        $taskResult.Complete()
 
         return $taskResult
     }
@@ -152,12 +185,8 @@ class UnifiedAuditLogIngestionEnabledTask : Task
     }
 }
 
-$BaselineResult = [BaselineResult]::new()
-
-$taskList = [System.Collections.ArrayList]::new()
-
-# Import the ExchangeOnlineManagement Module we imported into the Automation Account
-Import-Module ExchangeOnlineManagement
+$taskList = [System.Collections.Generic.List[Task]]::new()
+$baselineResult = [BaselineResult]::new()
 
 try
 {
@@ -165,29 +194,30 @@ try
 }
 catch
 {
-    $BaselineResult.ErrorMessageCollection.Add($error[0].Exception.Message)
+    $baselineResult.ErrorMessageCollection.Add($error[0].Exception.Message)
 }
 
 $connectionInformation = Get-ConnectionInformation
 
 if ($connectionInformation.State -eq "Connected")
 {
-    $BaselineResult.TenantId = $connectionInformation.TenantId
-    $BaselineResult.Organization = $connectionInformation.Organization
+    $baselineResult.TenantId = $connectionInformation.TenantId
+    $baselineResult.Organization = $connectionInformation.Organization
     $null = $taskList.Add([EnableOrganizationCustomizationTask]::new())
     $null = $taskList.Add([UnifiedAuditLogIngestionEnabledTask]::new())
 }
 
 foreach ($task in $taskList)
 {
-    $null = $BaselineResult.TaskResultCollection.Add($task.Run())
+    $null = $baselineResult.TaskResultCollection.Add($task.Run())
 }
 
-$BaselineResult.Terminate()
+$baselineResult.Complete()
 
 if ($connectionInformation.State -eq "Connected")
 {
     Disconnect-ExchangeOnline -Confirm:$false
 }
 
-Write-Output $BaselineResult
+Write-Output $baselineResult
+Write-Output $baselineResult.TaskResultCollection
