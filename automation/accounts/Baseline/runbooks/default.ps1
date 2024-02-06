@@ -185,7 +185,24 @@ class UnifiedAuditLogIngestionEnabledTask : Task
     }
 }
 
-$taskList = [System.Collections.Generic.List[Task]]::new()
+class TurnOffFocusedInboxTask : Task
+{
+    TurnOffFocusedInboxTask() : base ("TurnOffFocusedInbox")
+    {
+    }
+
+    [bool]IsCompliant()
+    {
+        return ((Get-OrganizationConfig).FocusedInboxOn -eq $false)
+    }
+
+    [void]MakeCompliant()
+    {
+        Set-OrganizationConfig -FocusedInboxOn $false
+    }
+}
+
+$taskCollection = [System.Collections.Generic.List[Task]]::new()
 $baselineResult = [BaselineResult]::new()
 
 try
@@ -203,11 +220,16 @@ if ($connectionInformation.State -eq "Connected")
 {
     $baselineResult.TenantId = $connectionInformation.TenantId
     $baselineResult.Organization = $connectionInformation.Organization
-    $null = $taskList.Add([EnableOrganizationCustomizationTask]::new())
-    $null = $taskList.Add([UnifiedAuditLogIngestionEnabledTask]::new())
+    $null = $taskCollection.AddRange(
+        [System.Collections.Generic.List[Task]]@(
+            [EnableOrganizationCustomizationTask]::new(),
+            [UnifiedAuditLogIngestionEnabledTask]::new(),
+            [TurnOffFocusedInboxTask]::new()
+        )
+    )
 }
 
-foreach ($task in $taskList)
+foreach ($task in $taskCollection)
 {
     $null = $baselineResult.TaskResultCollection.Add($task.Run())
 }
