@@ -6,6 +6,7 @@ param (
 )
 
 Import-Module ExchangeOnlineManagement
+Import-Module Microsoft.Graph.Authentication
 
 class Body
 {
@@ -202,6 +203,53 @@ class TurnOffFocusedInboxTask : Task
     }
 }
 
+class EnableTapPolicyTask : Task
+{
+    EnableTapPolicyTask() : base ("EnableTapPolicy")
+    {
+    }
+
+    [bool]IsCompliant()
+    {
+        $params = @{
+            Method = 'GET'
+            Uri    = 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/TemporaryAccessPass'
+        }
+        
+        return (Invoke-MgGraphRequest @params -ErrorAction Stop).State -eq "enabled"
+    }
+
+    [void]MakeCompliant()
+    {
+        $params = @{
+            Method = 'PATCH'
+            Uri    = 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/TemporaryAccessPass'
+            Body   = @'
+            {
+                "@odata.type": "#microsoft.graph.temporaryAccessPassAuthenticationMethodConfiguration",
+                "id": "TemporaryAccessPass",
+                "includeTargets": [
+                    {
+                        "id": "all_users",
+                        "isRegistrationRequired": false,
+                        "targetType": "group",
+                        "displayName": "Tous les utilisateurs"
+                    }
+                ],
+                "defaultLength": 8,
+                "defaultLifetimeInMinutes": 240,
+                "isUsableOnce": false,
+                "maximumLifetimeInMinutes": 480,
+                "minimumLifetimeInMinutes": 60,
+                "state": "enabled"
+            }
+'@
+        }
+
+        Invoke-MgGraphRequest @params -ErrorAction Stop
+    }
+}
+
 $taskCollection = [System.Collections.Generic.List[Task]]::new()
 $baselineResult = [BaselineResult]::new()
 
@@ -220,13 +268,25 @@ if ($connectionInformation.State -eq "Connected")
 {
     $baselineResult.TenantId = $connectionInformation.TenantId
     $baselineResult.Organization = $connectionInformation.Organization
-    $null = $taskCollection.AddRange(
-        [System.Collections.Generic.List[Task]]@(
-            [EnableOrganizationCustomizationTask]::new(),
-            [UnifiedAuditLogIngestionEnabledTask]::new(),
-            [TurnOffFocusedInboxTask]::new()
-        )
-    )
+    $null = $taskCollection.Add([EnableOrganizationCustomizationTask]::new())
+    $null = $taskCollection.Add([UnifiedAuditLogIngestionEnabledTask]::new())
+    $null = $taskCollection.Add([TurnOffFocusedInboxTask]::new())
+}
+
+try
+{
+    Connect-MgGraph -Identity -NoWelcome -ErrorAction Stop
+}
+catch
+{
+    $baselineResult.ErrorMessageCollection.Add($error[0].Exception.Message)
+}
+
+$mgContext = Get-MgContext
+
+if ($null -ne $mgContext)
+{
+    $null = $taskCollection.Add([EnableTapPolicyTask]::new())
 }
 
 foreach ($task in $taskCollection)
