@@ -156,6 +156,22 @@
             "dependsOn": [
                 "[resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName'))]"
             ]
+        },
+        {
+            "name": "[concat(parameters('automationAccountName'), '/Microsoft.Graph.Authentication')]",
+            "type": "Microsoft.Automation/automationAccounts/modules",
+            "apiVersion": "2022-08-08",
+            "location": "[parameters('automationLocation')]",
+            "properties": {
+                "isGlobal": false,
+                "sizeInBytes": 0,
+                "contentLink": {
+                    "uri": "[concat('https://www.powershellgallery.com/api/v2/package/', 'Microsoft.Graph.Authentication')]"
+                }
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName'))]"
+            ]
         }
     ],
     "outputs": {
