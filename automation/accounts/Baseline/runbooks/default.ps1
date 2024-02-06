@@ -253,6 +253,7 @@ class EnableTapPolicyTask : Task
 $taskCollection = [System.Collections.Generic.List[Task]]::new()
 $baselineResult = [BaselineResult]::new()
 
+# Exchange Online tasks
 try
 {
     Connect-ExchangeOnline -ManagedIdentity -Organization $requestBody.Organization -ErrorAction Stop
@@ -273,6 +274,7 @@ if ($connectionInformation.State -eq "Connected")
     $null = $taskCollection.Add([TurnOffFocusedInboxTask]::new())
 }
 
+# MS Graph tasks
 try
 {
     Connect-MgGraph -Identity -NoWelcome -ErrorAction Stop
@@ -289,6 +291,7 @@ if ($null -ne $mgContext)
     $null = $taskCollection.Add([EnableTapPolicyTask]::new())
 }
 
+# Running tasks
 foreach ($task in $taskCollection)
 {
     $null = $baselineResult.TaskResultCollection.Add($task.Run())
