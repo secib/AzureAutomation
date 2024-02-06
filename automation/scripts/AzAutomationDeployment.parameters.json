@@ -28,7 +28,8 @@
                 {
                     "ResourceAppId": "00000003-0000-0000-c000-000000000000",
                     "ApplicationRoles": [
-                        "Directory.ReadWrite.All"
+                        "Directory.ReadWrite.All",
+                        "Policy.ReadWrite.AuthenticationMethod"
                     ]
                 },
                 {
