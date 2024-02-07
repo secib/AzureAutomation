@@ -364,7 +364,7 @@ try
 {
     #Get the token using a managed identity and connect to graph using that token
     $azContext = (Connect-AzAccount -Identity -ErrorAction Stop).Context
-    $baselineResult.TenantId = $azContext.TenantId
+    $baselineResult.TenantId = $azContext.Tenant.Id
 }
 catch
 {

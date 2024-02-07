@@ -28,8 +28,10 @@
                 {
                     "ResourceAppId": "00000003-0000-0000-c000-000000000000",
                     "ApplicationRoles": [
-                        "Directory.ReadWrite.All",
-                        "Policy.ReadWrite.AuthenticationMethod"
+                        "Directory.Read.All",
+                        "Policy.Read.All",
+                        "Policy.ReadWrite.AuthenticationMethod",
+                        "Policy.ReadWrite.ConditionalAccess"
                     ]
                 },
                 {
@@ -40,8 +42,8 @@
                 }
             ],
             "DirectoryRoles": [
-                "Exchange Administrator",
-                "Directory Writers"
+                "Directory Writers",
+                "Exchange Administrator"
             ]
         }
     ]
