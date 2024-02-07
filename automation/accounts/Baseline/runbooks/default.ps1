@@ -93,6 +93,53 @@ function Disable-SecurityDefaultsEnforcementPolicy
     Invoke-MgGraphRequest @params -ErrorAction Stop
 }
 
+function Get-TAPPolicy
+{
+    [CmdletBinding()]
+    Param()
+
+    $params = @{
+        Method = 'GET'
+        Uri    = 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/TemporaryAccessPass'
+    }
+
+    Invoke-MgGraphRequest @params -ErrorAction Stop
+}
+
+function Enable-TAPPolicy
+{
+    [CmdletBinding()]
+    Param()
+
+    $params = @{
+        Method = 'PATCH'
+        Uri    = 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/TemporaryAccessPass'
+        Body   = @'
+        {
+            "@odata.type": "#microsoft.graph.temporaryAccessPassAuthenticationMethodConfiguration",
+            "id": "TemporaryAccessPass",
+            "includeTargets": [
+                {
+                    "id": "all_users",
+                    "isRegistrationRequired": false,
+                    "targetType": "group",
+                    "displayName": "Tous les utilisateurs"
+                }
+            ],
+            "defaultLength": 8,
+            "defaultLifetimeInMinutes": 240,
+            "isUsableOnce": false,
+            "maximumLifetimeInMinutes": 480,
+            "minimumLifetimeInMinutes": 60,
+            "state": "enabled"
+        }
+'@
+    }
+
+    Invoke-MgGraphRequest @params -ErrorAction Stop
+}
+
+
 class BaselineResult
 {
     [string]$TenantId
@@ -134,6 +181,7 @@ class TaskResult
     [string]$TaskName
     [string]$StartDate
     [string]$EndDate
+    [bool]$RequiredRemediation
     [bool]$IsCompliant
     [System.Collections.Generic.List[string]]$ErrorMessageCollection
 
@@ -182,8 +230,14 @@ class Task
             $taskResult.ErrorMessageCollection.Add("IsCompliant failed with error {0}" -f $error[0].Exception.Message)
         }
 
-        if (-not $taskResult.IsCompliant)
+        if ($taskResult.IsCompliant)
         {
+            $taskResult.RequiredRemediation = $false
+        }
+        else
+        {
+            $taskResult.RequiredRemediation = $true
+
             try
             {
                 $this.MakeCompliant()
@@ -285,42 +339,12 @@ class EnableTapPolicyTask : Task
 
     [bool]IsCompliant()
     {
-        $params = @{
-            Method = 'GET'
-            Uri    = 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/TemporaryAccessPass'
-        }
-        
-        return (Invoke-MgGraphRequest @params -ErrorAction Stop).State -eq "enabled"
+        return (Get-TAPPolicy -ErrorAction Stop).State -eq "enabled"
     }
 
     [void]MakeCompliant()
     {
-        $params = @{
-            Method = 'PATCH'
-            Uri    = 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/TemporaryAccessPass'
-            Body   = @'
-            {
-                "@odata.type": "#microsoft.graph.temporaryAccessPassAuthenticationMethodConfiguration",
-                "id": "TemporaryAccessPass",
-                "includeTargets": [
-                    {
-                        "id": "all_users",
-                        "isRegistrationRequired": false,
-                        "targetType": "group",
-                        "displayName": "Tous les utilisateurs"
-                    }
-                ],
-                "defaultLength": 8,
-                "defaultLifetimeInMinutes": 240,
-                "isUsableOnce": false,
-                "maximumLifetimeInMinutes": 480,
-                "minimumLifetimeInMinutes": 60,
-                "state": "enabled"
-            }
-'@
-        }
-
-        Invoke-MgGraphRequest @params -ErrorAction Stop
+        Enable-TAPPolicy -ErrorAction Stop
     }
 }
 
