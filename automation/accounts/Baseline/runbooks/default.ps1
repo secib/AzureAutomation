@@ -40,6 +40,59 @@ finally
     Write-Output $WebhookData.RequestBody
 }
 
+function Test-ADP1ServicePlan
+{
+    $params = @{
+        Method = 'GET'
+        Uri    = 'https://graph.microsoft.com/beta/subscribedSkus'
+    }
+    
+    [array]$servicePlans = (Invoke-MgGraphRequest @params -ErrorAction Stop).value.servicePlans | Where-Object { $_.ServicePlanName -Like 'AAD_PREMIUM*' }
+
+    return $servicePlans.Length -gt 0
+}
+
+function Get-SecurityDefaultsEnforcementPolicy
+{
+    [CmdletBinding()]
+    Param()
+
+    $params = @{
+        Method = 'GET'
+        Uri    = 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy'
+    }
+
+    Invoke-MgGraphRequest @params -ErrorAction Stop
+}
+
+function Enable-SecurityDefaultsEnforcementPolicy
+{
+    [CmdletBinding()]
+    Param()
+
+    $params = @{
+        Method = 'PATCH'
+        Uri    = 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy'
+        Body   = '{ "isEnabled": true }'
+    }
+
+    Invoke-MgGraphRequest @params -ErrorAction Stop
+}
+
+function Disable-SecurityDefaultsEnforcementPolicy
+{
+    [CmdletBinding()]
+    Param()
+
+    $params = @{
+        Method = 'PATCH'
+        Uri    = 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy'
+        Body   = '{ "isEnabled": false }'
+    }
+
+    Invoke-MgGraphRequest @params -ErrorAction Stop
+}
+
 class BaselineResult
 {
     [string]$TenantId
@@ -47,6 +100,8 @@ class BaselineResult
     [string]$StartDate
     [string]$EndDate
     [bool]$IsCompliant
+    [int]$TotalTask
+    [int]$CompliantTask
     [int]$CompliancyPercentage
     [System.Collections.Generic.List[TaskResult]]$TaskResultCollection
     [System.Collections.Generic.List[string]]$ErrorMessageCollection
@@ -63,11 +118,13 @@ class BaselineResult
     [void]Complete()
     {
         $this.EndDate = Get-Date -Format "dd-MM-yyyyTHH:mm:ssK"
+        $this.IsCompliant = $this.TaskResultCollection.IsCompliant -notcontains $false
+        $this.TotalTask = $this.TaskResultCollection.Count
+        $this.CompliantTask = ($this.TaskResultCollection | Where-Object { $_.IsCompliant }).Count
 
-        if ($this.TaskResultCollection.Count -ne 0)
+        if ($this.TotalTask -ne 0)
         {
-            $this.IsCompliant = $this.TaskResultCollection.IsCompliant -notcontains $false
-            $this.CompliancyPercentage = ($this.TaskResultCollection | Where-Object { $_.IsCompliant }).Count / $this.TaskResultCollection.Count * 100
+            $this.CompliancyPercentage = $this.CompliantTask / $this.TotalTask * 100
         }
     }
 }
@@ -203,6 +260,23 @@ class TurnOffFocusedInboxTask : Task
     }
 }
 
+class AutoExpandingArchiveEnabledTask : Task
+{
+    AutoExpandingArchiveEnabledTask() : base ("AutoExpandingArchiveEnabled")
+    {
+    }
+
+    [bool]IsCompliant()
+    {
+        return ((Get-OrganizationConfig -ErrorAction Stop).AutoExpandingArchiveEnabled)
+    }
+
+    [void]MakeCompliant()
+    {
+        Set-OrganizationConfig -AutoExpandingArchive -ErrorAction Stop
+    }
+}
+
 class EnableTapPolicyTask : Task
 {
     EnableTapPolicyTask() : base ("EnableTapPolicy")
@@ -250,59 +324,103 @@ class EnableTapPolicyTask : Task
     }
 }
 
-$taskCollection = [System.Collections.Generic.List[Task]]::new()
+class SecurityDefaultsEnforcementPolicyTask : Task
+{
+    SecurityDefaultsEnforcementPolicyTask() : base ("SecurityDefaultsEnforcementPolicy")
+    {
+    }
+
+    [bool]IsCompliant()
+    {
+        if (Test-ADP1ServicePlan)
+        {
+            return -not (Get-SecurityDefaultsEnforcementPolicy).isEnabled
+        }
+        else
+        {
+            return (Get-SecurityDefaultsEnforcementPolicy).isEnabled
+        }
+    }
+
+    [void]MakeCompliant()
+    {
+        if (Test-ADP1ServicePlan)
+        {
+            Disable-SecurityDefaultsEnforcementPolicy
+        }
+        else
+        {
+            Enable-SecurityDefaultsEnforcementPolicy
+        }
+    }
+}
+
 $baselineResult = [BaselineResult]::new()
 
-# Exchange Online tasks
+# Ensures you do not inherit an AzContext in your runbook
+$null = Disable-AzContextAutosave -Scope Process
+
+try
+{
+    #Get the token using a managed identity and connect to graph using that token
+    $azContext = (Connect-AzAccount -Identity -ErrorAction Stop).Context
+    $baselineResult.TenantId = $azContext.TenantId
+}
+catch
+{
+    $baselineResult.ErrorMessageCollection.Add($error[0].Exception.Message)
+}
+
+# MS Graph
+if (Get-MgContext)
+{
+    Disconnect-MgGraph
+}
+try
+{
+    $accessToken = Get-AzAccessToken -ResourceTypeName MSGraph -ErrorAction Stop | Select-Object -ExpandProperty Token
+    Connect-MgGraph -AccessToken (ConvertTo-SecureString -AsPlainText $accessToken -Force) -NoWelcome -ErrorAction Stop | Out-Null
+}
+catch
+{
+    $baselineResult.ErrorMessageCollection.Add($error[0].Exception.Message)
+}
+
+# Exchange Online
+if ((Get-ConnectionInformation).State -eq "Connected")
+{
+    Disconnect-ExchangeOnline -Confirm:$false
+}
 try
 {
     Connect-ExchangeOnline -ManagedIdentity -Organization $requestBody.Organization -ErrorAction Stop
+    $baselineResult.Organization = $requestBody.Organization
 }
 catch
 {
-    $baselineResult.ErrorMessageCollection.Add($error[0].Exception.Message)
-}
-
-$connectionInformation = Get-ConnectionInformation
-
-if ($connectionInformation.State -eq "Connected")
-{
-    $baselineResult.TenantId = $connectionInformation.TenantId
-    $baselineResult.Organization = $connectionInformation.Organization
-    $null = $taskCollection.Add([EnableOrganizationCustomizationTask]::new())
-    $null = $taskCollection.Add([UnifiedAuditLogIngestionEnabledTask]::new())
-    $null = $taskCollection.Add([TurnOffFocusedInboxTask]::new())
-}
-
-# MS Graph tasks
-try
-{
-    Connect-MgGraph -Identity -NoWelcome -ErrorAction Stop
-}
-catch
-{
-    $baselineResult.ErrorMessageCollection.Add($error[0].Exception.Message)
-}
-
-$mgContext = Get-MgContext
-
-if ($null -ne $mgContext)
-{
-    $null = $taskCollection.Add([EnableTapPolicyTask]::new())
+    $baselineResult.WarningMessageCollection.Add($error[0].Exception.Message)
 }
 
 # Running tasks
+$taskCollection = [System.Collections.Generic.List[Task]]@(
+    [SecurityDefaultsEnforcementPolicyTask]::new(),
+    [EnableTapPolicyTask]::new()
+)
+
+if ((Get-ConnectionInformation).State -eq "Connected")
+{
+    $null = $taskCollection.Add([EnableOrganizationCustomizationTask]::new())
+    $null = $taskCollection.Add([UnifiedAuditLogIngestionEnabledTask]::new())
+    $null = $taskCollection.Add([TurnOffFocusedInboxTask]::new())
+    $null = $taskCollection.Add([AutoExpandingArchiveEnabledTask]::new())
+}
+
 foreach ($task in $taskCollection)
 {
     $null = $baselineResult.TaskResultCollection.Add($task.Run())
 }
 
 $baselineResult.Complete()
-
-if ($connectionInformation.State -eq "Connected")
-{
-    Disconnect-ExchangeOnline -Confirm:$false
-}
 
 Write-Output $baselineResult
 Write-Output $baselineResult.TaskResultCollection
